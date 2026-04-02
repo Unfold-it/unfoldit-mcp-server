@@ -1,19 +1,19 @@
-# Unfold MCP Server
+# Unfold It MCP Server
 
-Connect AI assistants to [Unfold](https://unfoldit.com) -- create goals with AI-generated plans, distribute claim links to users, and track their progress.
+Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, distribute claim links to users, and track their progress.
 
-Built for platforms (academies, LMS tools, coaching apps) that want to use Unfold as their execution layer. One API call creates a goal, generates a personalized AI plan, and returns a link you send to the learner.
+Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. One API call creates a goal, generates a personalized AI plan, and returns a link you send to the learner.
 
 ## Quick Start
 
 ```bash
-npx unfoldit-mcp-server
+npx @unfoldit/mcp-server
 ```
 
 Or install globally:
 
 ```bash
-npm install -g unfoldit-mcp-server
+npm install -g @unfoldit/mcp-server
 ```
 
 ## Configuration
@@ -32,9 +32,9 @@ Add to your MCP config (`claude_desktop_config.json` or `.mcp.json`):
 ```json
 {
   "mcpServers": {
-    "unfold": {
+    "unfoldit": {
       "command": "npx",
-      "args": ["unfoldit-mcp-server"],
+      "args": ["@unfoldit/mcp-server"],
       "env": {
         "UNFOLD_API_KEY": "unfold_sk_..."
       }
@@ -50,9 +50,9 @@ Add to `.cursor/mcp.json` in your project:
 ```json
 {
   "mcpServers": {
-    "unfold": {
+    "unfoldit": {
       "command": "npx",
-      "args": ["unfoldit-mcp-server"],
+      "args": ["@unfoldit/mcp-server"],
       "env": {
         "UNFOLD_API_KEY": "unfold_sk_..."
       }
@@ -65,7 +65,7 @@ Add to `.cursor/mcp.json` in your project:
 
 ### create_goal
 
-Create a goal in your Unfold org with AI-generated plan and steps. Returns a one-time claim link to send to the user.
+Create a goal in your Unfold It org with AI-generated plan and steps. Returns a one-time claim link to send to the user.
 
 **Input:**
 - `title` (required) -- Goal title
@@ -115,7 +115,7 @@ Invalidate a claim link so it can no longer be used.
 ## How It Works
 
 1. **You call `create_goal`** with a title and description
-2. **Unfold's AI generates** clarification questions, auto-answers them, and produces a personalized plan with steps (takes 15-30s in the background)
+2. **Unfold It's AI generates** clarification questions, auto-answers them, and produces a personalized plan with steps (takes 15-30s in the background)
 3. **You get a claim link** immediately -- send it to your user
 4. **User clicks the link**, signs up/logs in, auto-joins your org, and lands directly on their goal with the AI plan ready
 5. **Track progress** via `get_goal_status` or embed the progress report link in your app
@@ -139,6 +139,11 @@ Here are real prompts you can give to an AI assistant with this MCP server conne
 3. Go to Organization settings
 4. Scroll to **API Keys** section
 5. Click **+ Create Key**, give it a name, and copy the key
+
+## Learn More
+
+- [Unfold It](https://unfoldit.ai) -- AI-powered goal planning and execution platform
+- [GitHub](https://github.com/Unfold-it/unfoldit-mcp-server) -- Source code and issues
 
 ## License
 

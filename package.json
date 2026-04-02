@@ -1,10 +1,10 @@
 {
-  "name": "unfold-mcp-server",
+  "name": "unfoldit-mcp-server",
   "version": "0.1.0",
   "description": "MCP server for Unfold -- create goals, distribute claim links, and track progress via AI assistants",
   "type": "module",
   "bin": {
-    "unfold-mcp-server": "./dist/index.js"
+    "unfoldit-mcp-server": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "scripts": {

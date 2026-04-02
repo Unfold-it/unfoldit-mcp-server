@@ -7,13 +7,13 @@ Built for platforms (academies, LMS tools, coaching apps) that want to use Unfol
 ## Quick Start
 
 ```bash
-npx unfold-mcp-server
+npx unfoldit-mcp-server
 ```
 
 Or install globally:
 
 ```bash
-npm install -g unfold-mcp-server
+npm install -g unfoldit-mcp-server
 ```
 
 ## Configuration
@@ -34,7 +34,7 @@ Add to your MCP config (`claude_desktop_config.json` or `.mcp.json`):
   "mcpServers": {
     "unfold": {
       "command": "npx",
-      "args": ["unfold-mcp-server"],
+      "args": ["unfoldit-mcp-server"],
       "env": {
         "UNFOLD_API_KEY": "unfold_sk_..."
       }
@@ -52,7 +52,7 @@ Add to `.cursor/mcp.json` in your project:
   "mcpServers": {
     "unfold": {
       "command": "npx",
-      "args": ["unfold-mcp-server"],
+      "args": ["unfoldit-mcp-server"],
       "env": {
         "UNFOLD_API_KEY": "unfold_sk_..."
       }

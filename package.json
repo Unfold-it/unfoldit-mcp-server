@@ -1,0 +1,41 @@
+{
+  "name": "unfold-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Unfold -- create goals, distribute claim links, and track progress via AI assistants",
+  "type": "module",
+  "bin": {
+    "unfold-mcp-server": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "unfold",
+    "goal-planning",
+    "ai-assistant",
+    "model-context-protocol"
+  ],
+  "author": "Unfold",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.2",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

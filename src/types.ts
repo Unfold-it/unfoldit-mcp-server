@@ -40,3 +40,73 @@ export interface ExtGoalListResponse {
   goals: ExtGoalStatus[];
   total: number;
 }
+
+// Agent-assisted unfold (Tier 1 + 2)
+
+export interface AgentAnswerDetail {
+  questionId: string;
+  questionText: string;
+  answer: string;
+  confidence: string;
+  source: string;
+  sourceType: string;
+}
+
+export interface ClarificationQuestion {
+  id: string;
+  text: string;
+  type: string;
+  options?: string[];
+  multiSelect?: boolean;
+  defaultAssumption?: string;
+  agentAnswer?: string;
+  agentConfidence?: string;
+  agentSource?: string;
+}
+
+export interface ExtUnfoldResponse {
+  goalId: string;
+  sessionId?: string;
+  status: string;
+  planGenerationStatus: string;
+  questions?: ClarificationQuestion[];
+  agentAnswersUsed?: AgentAnswerDetail[];
+  claimLink?: string;
+  claimToken?: string;
+  claimExpiresAt?: string;
+  progressLink?: string;
+}
+
+export interface ExtClarifySubmitResponse {
+  goalId: string;
+  status: string;
+  planGenerationStatus: string;
+  agentAnswersUsed?: AgentAnswerDetail[];
+}
+
+// Tier 3: Passthrough import
+
+export interface EnrichedStep {
+  title: string;
+  description?: string;
+  order: number;
+  dependencies?: string[];
+  isCriticalPath?: boolean;
+  severity?: string;
+  duration?: string;
+  complexity?: string;
+  isQuickWin?: boolean;
+  substeps?: unknown[];
+}
+
+export interface ExtImportResponse {
+  goalId: string;
+  planId?: string;
+  status: string;
+  planGenerationStatus: string;
+  steps?: EnrichedStep[];
+  claimLink?: string;
+  claimToken?: string;
+  claimExpiresAt?: string;
+  progressLink?: string;
+}

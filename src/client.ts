@@ -4,6 +4,9 @@ import type {
   ExtGoalCreated,
   ExtGoalStatus,
   ExtGoalListResponse,
+  ExtUnfoldResponse,
+  ExtClarifySubmitResponse,
+  ExtImportResponse,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.unfoldit.com";
@@ -103,5 +106,98 @@ export class UnfoldClient {
 
   async revokeClaim(claimToken: string): Promise<void> {
     await this.request<void>("DELETE", `/goals/claims/${claimToken}`);
+  }
+
+  // Agent-assisted unfold (Tier 1 + 2)
+
+  async unfoldGoal(params: {
+    title: string;
+    description?: string;
+    context?: Record<string, unknown>;
+    goalContext?: string;
+    priority?: string;
+    autoRespond?: boolean;
+    clarificationAnswers?: Record<string, string>;
+    createSubsteps?: boolean;
+    suggestResources?: boolean;
+    claimExpiresInDays?: number;
+    progressShare?: boolean;
+  }): Promise<ExtUnfoldResponse> {
+    return this.request<ExtUnfoldResponse>("POST", "/goals/unfold", {
+      title: params.title,
+      description: params.description,
+      context: params.context,
+      goalContext: params.goalContext || "professional",
+      priority: params.priority || "medium",
+      autoRespond: params.autoRespond ?? true,
+      clarificationAnswers: params.clarificationAnswers,
+      createSubsteps: params.createSubsteps ?? false,
+      suggestResources: params.suggestResources ?? false,
+      claimExpiresInDays: params.claimExpiresInDays || 30,
+      progressShare: params.progressShare !== false
+        ? { enabled: true }
+        : undefined,
+    });
+  }
+
+  async submitClarification(
+    goalId: string,
+    params: {
+      answers?: Record<string, string>;
+      acceptAgentAnswers?: boolean;
+    }
+  ): Promise<ExtClarifySubmitResponse> {
+    return this.request<ExtClarifySubmitResponse>(
+      "POST",
+      `/goals/${goalId}/clarify/submit-all`,
+      {
+        answers: params.answers || {},
+        acceptAgentAnswers: params.acceptAgentAnswers ?? true,
+      }
+    );
+  }
+
+  // Tier 3: Passthrough import
+
+  async importPlan(params: {
+    title: string;
+    description?: string;
+    steps: Array<{
+      title: string;
+      description?: string;
+      substeps?: Array<{
+        title: string;
+        description?: string;
+        type?: string;
+      }>;
+    }>;
+    goalContext?: string;
+    priority?: string;
+    enrich?: boolean;
+    enrichOptions?: {
+      dependencies?: boolean;
+      criticalPath?: boolean;
+      durationEstimates?: boolean;
+      severity?: boolean;
+      complexity?: boolean;
+      quickWins?: boolean;
+      resources?: boolean;
+    };
+    claimExpiresInDays?: number;
+    progressShare?: boolean;
+  }): Promise<ExtImportResponse> {
+    return this.request<ExtImportResponse>("POST", "/goals/import", {
+      title: params.title,
+      description: params.description,
+      steps: params.steps,
+      goalContext: params.goalContext || "professional",
+      priority: params.priority || "medium",
+      enrich: params.enrich ?? true,
+      enrichOptions: params.enrichOptions,
+      claimExpiresInDays: params.claimExpiresInDays || 30,
+      progressShare: params.progressShare !== false
+        ? { enabled: true }
+        : undefined,
+    });
   }
 }

@@ -14,21 +14,32 @@ with a fully AI-generated plan ready to execute.
 The plan generates asynchronously (15-30s). The claim link works immediately.
 Use get_goal_status to check when planGenerationStatus changes to "completed".
 
+With auto_respond=true (default), the agent answers all clarification questions
+automatically using the provided context and user history. Set auto_respond=false
+to get questions back with agent suggestions for client review -- then use
+submit_clarification to provide your answers.
+
 Each goal is for one user. Call this once per learner/user.`,
     {
       title: z.string().describe("Goal title, e.g. 'AI Fundamentals Learning Path'"),
       description: z.string().optional()
         .describe("Goal description with context. More detail produces a better AI plan."),
-      additional_context: z.string().optional()
-        .describe("Extra context for plan generation (e.g. suggested topics, learning objectives, step hints)"),
-      clarification_context: z.object({
-        experience_level: z.string().optional().describe("e.g. 'beginner', 'intermediate', 'advanced'"),
-        timeline: z.string().optional().describe("e.g. '3 months', '2 weeks'"),
+      context: z.object({
+        tech_stack: z.array(z.string()).optional().describe("e.g. ['Python', 'React']"),
+        team_size: z.number().optional(),
+        timeline: z.string().optional().describe("e.g. '3 months', 'Q3 2026'"),
         constraints: z.string().optional().describe("e.g. 'limited budget', '2 hours per week'"),
         resources: z.string().optional().describe("e.g. 'team of 3', 'solo learner'"),
-        success_criteria: z.string().optional().describe("e.g. 'pass certification exam', 'complete project'"),
-      }).optional().describe("Context for auto-answering clarification questions. Helps generate a more relevant plan."),
-      context: z.enum(["personal", "professional"]).default("professional"),
+        success_criteria: z.string().optional().describe("e.g. 'pass certification exam'"),
+        experience_level: z.string().optional().describe("e.g. 'beginner', 'intermediate', 'advanced'"),
+        industry: z.string().optional(),
+        additional_notes: z.string().optional(),
+      }).optional().describe("Context for the agent to answer clarification questions. More context = better plan."),
+      auto_respond: z.boolean().default(true)
+        .describe("true = fully autonomous (agent answers all questions). false = returns questions with suggestions for review."),
+      clarification_answers: z.record(z.string()).optional()
+        .describe("Pre-set answers by question ID. Agent skips these questions."),
+      goal_context: z.enum(["personal", "professional"]).default("professional"),
       priority: z.enum(["low", "medium", "high"]).default("medium"),
       claim_expires_in_days: z.number().min(1).max(365).default(30)
         .describe("How many days the claim link stays valid"),
@@ -36,19 +47,14 @@ Each goal is for one user. Call this once per learner/user.`,
         .describe("Generate an embeddable progress report link"),
     },
     async (params) => {
-      const result = await client.createGoal({
+      const result = await client.unfoldGoal({
         title: params.title,
         description: params.description,
-        additionalContext: params.additional_context,
-        clarificationContext: params.clarification_context ? {
-          experienceLevel: params.clarification_context.experience_level,
-          timeline: params.clarification_context.timeline,
-          constraints: params.clarification_context.constraints,
-          resources: params.clarification_context.resources,
-          successCriteria: params.clarification_context.success_criteria,
-        } : undefined,
-        context: params.context,
+        context: params.context as Record<string, unknown> | undefined,
+        goalContext: params.goal_context,
         priority: params.priority,
+        autoRespond: params.auto_respond,
+        clarificationAnswers: params.clarification_answers,
         claimExpiresInDays: params.claim_expires_in_days,
         progressShare: params.progress_share,
       });

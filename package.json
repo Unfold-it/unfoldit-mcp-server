@@ -1,7 +1,7 @@
 {
   "name": "@unfoldit/mcp-server",
-  "version": "0.1.1",
-  "description": "MCP server for Unfold It (https://unfoldit.ai) -- create goals with AI-generated plans, distribute claim links, and track progress via AI assistants",
+  "version": "0.2.0",
+  "description": "MCP server for Unfold It (https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, and progress tracking via AI assistants",
   "type": "module",
   "bin": {
     "unfoldit-mcp": "./dist/index.js"
@@ -18,7 +18,9 @@
     "unfold",
     "goal-planning",
     "ai-assistant",
-    "model-context-protocol"
+    "model-context-protocol",
+    "agent-assisted",
+    "plan-import"
   ],
   "author": "Unfold",
   "license": "MIT",

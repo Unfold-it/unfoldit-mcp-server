@@ -1,6 +1,6 @@
 {
   "name": "@unfoldit/mcp-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server for Unfold It (https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, and progress tracking via AI assistants",
   "type": "module",
   "bin": {

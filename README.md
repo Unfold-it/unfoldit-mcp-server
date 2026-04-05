@@ -1,8 +1,8 @@
 # Unfold It MCP Server
 
-Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, distribute claim links to users, and track their progress.
+Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, and progress tracking.
 
-Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. One API call creates a goal, generates a personalized AI plan, and returns a link you send to the learner.
+Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. Three autonomy tiers: fully autonomous, semi-auto with review, or import your own steps with AI enrichment.
 
 ## Quick Start
 
@@ -61,37 +61,81 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-## Available Tools
+## Available Tools (7)
 
 ### create_goal
 
-Create a goal in your Unfold It org with AI-generated plan and steps. Returns a one-time claim link to send to the user.
+Create a goal with an AI-generated plan. The agent auto-answers clarification questions using the context you provide. Set `auto_respond=false` to review agent suggestions before the plan generates.
 
 **Input:**
 - `title` (required) -- Goal title
 - `description` -- Goal description. More detail produces a better AI plan
-- `additional_context` -- Extra context (suggested topics, learning objectives)
-- `clarification_context` -- Hints for the AI planner:
-  - `experience_level` -- e.g. "beginner", "advanced"
-  - `timeline` -- e.g. "3 months"
+- `context` -- Rich context for the agent:
+  - `tech_stack` -- e.g. ["Python", "React"]
+  - `team_size` -- e.g. 3
+  - `timeline` -- e.g. "3 months", "Q3 2026"
   - `constraints` -- e.g. "2 hours per week"
-  - `resources` -- e.g. "solo learner"
-  - `success_criteria` -- e.g. "pass certification exam"
-- `context` -- "personal" or "professional" (default: "professional")
+  - `experience_level` -- e.g. "beginner", "advanced"
+  - `industry` -- e.g. "fintech"
+  - `additional_notes` -- Any other context
+- `auto_respond` -- true (default): agent answers all questions. false: returns questions with suggestions for review
+- `clarification_answers` -- Pre-set answers by question ID (agent skips these)
+- `goal_context` -- "personal" or "professional" (default: "professional")
 - `priority` -- "low", "medium", or "high" (default: "medium")
 - `claim_expires_in_days` -- Claim link validity (default: 30)
 - `progress_share` -- Generate embeddable progress link (default: true)
 
-**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`
+**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`
 
 ### get_goal_status
 
-Get the current status and progress of a goal.
+Get the current status and progress of a goal. Includes agent answer transparency when plan is ready.
 
 **Input:**
 - `goal_id` (required) -- The goal ID from create_goal
 
-**Returns:** Goal status, plan generation status, assigned user, step completion, progress link
+**Returns:** Goal status, plan generation status, assigned user, step completion, progress link, `agentAnswersUsed`
+
+### get_clarification
+
+Get pending clarification questions with agent-suggested answers and confidence levels. Use after `create_goal` with `auto_respond=false`.
+
+**Input:**
+- `goal_id` (required) -- The goal ID from create_goal
+
+**Returns:** Questions with `agentAnswer`, `agentConfidence` (high/medium/low/fallback), `agentSource`
+
+### submit_clarification
+
+Submit answers to clarification questions and trigger plan generation. Provide your own answers for questions you want to override. Agent suggestions are kept for the rest.
+
+**Input:**
+- `goal_id` (required) -- The goal ID from create_goal
+- `answers` -- Your answers keyed by question ID (only include overrides)
+- `accept_agent_answers` -- Accept agent suggestions for unoverridden questions (default: true)
+
+**Returns:** `goalId`, `status`, `planGenerationStatus`, `agentAnswersUsed`
+
+### import_plan
+
+Import a pre-formulated plan with steps and substeps. Skips clarification entirely. AI enriches steps with dependencies, critical path, duration estimates, severity, complexity, and quick-win flags.
+
+**Input:**
+- `title` (required) -- Goal title
+- `description` -- Goal description
+- `steps` (required) -- Array of steps, each with:
+  - `title` (required) -- Step title
+  - `description` -- Step description
+  - `substeps` -- Optional array of substeps with title, description, type (research/work/decision/verification)
+- `enrich` -- Run AI enrichment (default: true). Set false for 0 credits
+- `enrich_options` -- Control which enrichment features to run:
+  - `dependencies`, `critical_path`, `duration_estimates`, `severity`, `complexity`, `quick_wins`, `resources`
+- `goal_context` -- "personal" or "professional" (default: "professional")
+- `priority` -- "low", "medium", or "high" (default: "medium")
+- `claim_expires_in_days` -- Claim link validity (default: 30)
+- `progress_share` -- Generate embeddable progress link (default: true)
+
+**Returns:** `goalId`, `planId`, enriched `steps[]` with metadata, `claimLink`
 
 ### list_goals
 
@@ -114,23 +158,40 @@ Invalidate a claim link so it can no longer be used.
 
 ## How It Works
 
-1. **You call `create_goal`** with a title and description
-2. **Unfold It's AI generates** clarification questions, auto-answers them, and produces a personalized plan with steps (takes 15-30s in the background)
-3. **You get a claim link** immediately -- send it to your user
-4. **User clicks the link**, signs up/logs in, auto-joins your org, and lands directly on their goal with the AI plan ready
-5. **Track progress** via `get_goal_status` or embed the progress report link in your app
+### Tier 1 -- Semi-Auto (Review agent suggestions)
+
+1. Call `create_goal` with `auto_respond=false` and your context
+2. Get back questions with agent-suggested answers and confidence levels
+3. Review suggestions, override any you disagree with
+4. Call `submit_clarification` to trigger plan generation
+5. Poll `get_goal_status` until `planGenerationStatus` is "completed"
+
+### Tier 2 -- Full-Auto (Agent handles everything)
+
+1. Call `create_goal` with context (auto_respond defaults to true)
+2. Agent answers all clarification questions using your context + user history
+3. Plan generates in the background (15-30s)
+4. Get a claim link immediately -- send it to your user
+5. Poll `get_goal_status` for completion and `agentAnswersUsed` transparency
+
+### Tier 3 -- Import (Bring your own steps)
+
+1. Call `import_plan` with your steps and substeps
+2. AI enriches with dependencies, durations, severity, critical path
+3. Plan is ready immediately (no clarification needed)
+4. Get a claim link and enriched step metadata
 
 ## Example Prompts
 
-Here are real prompts you can give to an AI assistant with this MCP server connected:
+> "Create a Python certification learning path for a beginner with 2 hours per week for 3 months."
 
-> "Create an AI fundamentals learning path for a beginner engineer who has 2 hours per week for 3 months. They need to pass our internal AI readiness assessment."
+> "Import our Jira sprint backlog as a goal with dependencies and time estimates."
+
+> "Create a coaching plan for Sarah but let me review the questions before generating the plan."
 
 > "Show me all goals where the claim link hasn't been used yet."
 
 > "What's the progress on goal abc-123? Has the learner started?"
-
-> "Create onboarding goals for these 5 new hires: [names]. Each should have a 'First 90 Days' plan focused on learning our tech stack."
 
 ## Getting an API Key
 
@@ -143,6 +204,7 @@ Here are real prompts you can give to an AI assistant with this MCP server conne
 ## Learn More
 
 - [Unfold It](https://unfoldit.ai) -- AI-powered goal planning and execution platform
+- [Developers](https://unfoldit.ai/developers) -- API and MCP documentation
 - [GitHub](https://github.com/Unfold-it/unfoldit-mcp-server) -- Source code and issues
 
 ## License

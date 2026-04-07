@@ -1,8 +1,8 @@
 # Unfold It MCP Server
 
-Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, and progress tracking.
+Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, individual progress tracking, and cohort analytics.
 
-Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. Three autonomy tiers: fully autonomous, semi-auto with review, or import your own steps with AI enrichment.
+Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. Three autonomy tiers: fully autonomous, semi-auto with review, or import your own steps with AI enrichment. Tag goals with custom metadata to track and analyze entire cohorts.
 
 ## Quick Start
 
@@ -61,11 +61,11 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-## Available Tools (7)
+## Available Tools (8)
 
 ### create_goal
 
-Create a goal with an AI-generated plan. The agent auto-answers clarification questions using the context you provide. Set `auto_respond=false` to review agent suggestions before the plan generates.
+Create a goal with an AI-generated plan. The agent auto-answers clarification questions using the context you provide. Set `auto_respond=false` to review agent suggestions before the plan generates. Tag goals with `metadata` to group and analyse entire cohorts.
 
 **Input:**
 - `title` (required) -- Goal title
@@ -84,17 +84,39 @@ Create a goal with an AI-generated plan. The agent auto-answers clarification qu
 - `priority` -- "low", "medium", or "high" (default: "medium")
 - `claim_expires_in_days` -- Claim link validity (default: 30)
 - `progress_share` -- Generate embeddable progress link (default: true)
+- `metadata` -- Custom key-value tags for analytics grouping, e.g. `{ cohort: "spring-2026", track: "frontend" }`
 
 **Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`
 
 ### get_goal_status
 
-Get the current status and progress of a goal. Includes agent answer transparency when plan is ready.
+Get the current status and full step-by-step detail of a goal. Returns individual step data (timestamps, time spent, blocker count, substep progress) when the plan is ready.
 
 **Input:**
 - `goal_id` (required) -- The goal ID from create_goal
 
-**Returns:** Goal status, plan generation status, assigned user, step completion, progress link, `agentAnswersUsed`
+**Returns:** Goal status, `progress`, `steps[]` (with per-step detail when plan is ready), `metadata`, `claimCreatedAt`, `claimedAt`, `assignedTo`, `agentAnswersUsed`
+
+### get_analytics
+
+Aggregated cohort analytics across all API-created goals. Returns KPIs, at-risk learners, a step-level drop-off funnel, and optional breakdowns by metadata dimension or resource type.
+
+**Input:**
+- `group_by` -- Metadata key to break down completion rates by (e.g. "track", "cohort", "department")
+- `inactive_days` -- Flag goals with no step activity in this many days as at-risk (default: 7)
+- `include_funnel` -- Include step-by-step completion funnel (default: true)
+- `include_resources` -- Include resource engagement by type and source (default: false)
+- `metadata` -- Filter to a specific cohort or segment, e.g. `{ cohort: "spring-2026" }`
+- `date_from` -- ISO date (YYYY-MM-DD). Only include goals created on or after this date
+- `date_to` -- ISO date (YYYY-MM-DD). Only include goals created on or before this date
+
+**Returns:**
+- `totalGoals`, `activeGoals`, `completedGoals`, `blockedGoals`, `completionRate`, `avgDaysToComplete`
+- `claimsTotal`, `claimsClaimed`, `claimsPending`, `claimsExpired`, `avgHoursToClaim`
+- `atRiskCount`, `atRiskGoals[]` (goalId, title, metadata, daysInactive, progressPercent)
+- `completionByDimension[]` (when group_by is set)
+- `stepFunnel[]` (stepOrder, stepTitle, completionRate, avgHoursToComplete)
+- `resourceEngagement[]` (when include_resources=true)
 
 ### get_clarification
 
@@ -134,20 +156,24 @@ Import a pre-formulated plan with steps and substeps. Skips clarification entire
 - `priority` -- "low", "medium", or "high" (default: "medium")
 - `claim_expires_in_days` -- Claim link validity (default: 30)
 - `progress_share` -- Generate embeddable progress link (default: true)
+- `metadata` -- Custom key-value tags for analytics grouping, e.g. `{ cohort: "spring-2026", track: "backend" }`
 
 **Returns:** `goalId`, `planId`, enriched `steps[]` with metadata, `claimLink`
 
 ### list_goals
 
-List all goals in your org with optional filters.
+List all goals in your org with optional filters. Use `metadata` to filter to a cohort, `assigned_email` to look up a specific learner, or `inactive_days` to find at-risk goals without pulling full analytics.
 
 **Input:**
 - `status` -- Filter by goal status (draft, in_progress, completed, blocked, paused)
 - `claim_status` -- Filter by claim status (unclaimed, claimed, expired, revoked)
+- `metadata` -- Filter by metadata tag(s) in "key=value" format, e.g. `["track=frontend", "cohort=spring-2026"]`
+- `assigned_email` -- Return only the goal assigned to this learner email
+- `inactive_days` -- Return only goals with no step activity in the last N days (1-365)
 - `limit` -- Max results (default: 50)
 - `offset` -- Pagination offset
 
-**Returns:** Array of goal statuses with progress
+**Returns:** Array of goal statuses with `progress`, `metadata`, `claimCreatedAt`, `claimedAt`
 
 ### revoke_claim
 

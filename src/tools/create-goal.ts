@@ -45,6 +45,8 @@ Each goal is for one user. Call this once per learner/user.`,
         .describe("How many days the claim link stays valid"),
       progress_share: z.boolean().default(true)
         .describe("Generate an embeddable progress report link"),
+      metadata: z.record(z.string()).optional()
+        .describe("Custom key-value tags for filtering and analytics (e.g. {cohort: 'spring-2026', track: 'frontend', department: 'engineering'}). Used in get_analytics to group and filter results."),
     },
     async (params) => {
       const result = await client.unfoldGoal({
@@ -57,6 +59,7 @@ Each goal is for one user. Call this once per learner/user.`,
         clarificationAnswers: params.clarification_answers,
         claimExpiresInDays: params.claim_expires_in_days,
         progressShare: params.progress_share,
+        metadata: params.metadata,
       });
 
       return {

@@ -23,6 +23,26 @@ export interface ExtProgress {
   blockedSteps: number;
 }
 
+export interface ExtStepStatus {
+  id: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  status: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  durationEstimate?: string | null;
+  timeSpentSeconds: number;
+  complexity?: string | null;
+  priority?: string | null;
+  isCriticalPath: boolean;
+  isQuickWin: boolean;
+  blockerCount: number;
+  resourceCount: number;
+  substepCount: number;
+  substepCompletedCount: number;
+}
+
 export interface ExtGoalStatus {
   goalId: string;
   title: string;
@@ -30,10 +50,13 @@ export interface ExtGoalStatus {
   planGenerationStatus: string;
   assignedTo: ExtUser | null;
   claimStatus: string;
+  claimCreatedAt: string | null;
   claimedAt: string | null;
   progress: ExtProgress;
   progressLink: string | null;
   lastActivityAt: string | null;
+  metadata?: Record<string, string> | null;
+  steps?: ExtStepStatus[] | null;
 }
 
 export interface ExtGoalListResponse {
@@ -109,4 +132,61 @@ export interface ExtImportResponse {
   claimToken?: string;
   claimExpiresAt?: string;
   progressLink?: string;
+}
+
+// Analytics types
+
+export interface AtRiskGoal {
+  goalId: string;
+  title: string;
+  metadata?: Record<string, string> | null;
+  daysInactive: number;
+  progressPercent: number;
+}
+
+export interface DimensionCompletion {
+  dimension: string;
+  total: number;
+  completed: number;
+  completionRate: number;
+}
+
+export interface FunnelStep {
+  stepOrder: number;
+  stepTitle: string;
+  totalGoals: number;
+  completed: number;
+  completionRate: number;
+  avgHoursToComplete?: number | null;
+}
+
+export interface ResourceEngagement {
+  resourceType: string;
+  addedBy: string;
+  total: number;
+  completed: number;
+  engagementRate: number;
+}
+
+export interface ExtAnalyticsResult {
+  totalGoals: number;
+  activeGoals: number;
+  completedGoals: number;
+  blockedGoals: number;
+  completionRate: number;
+  avgDaysToComplete?: number | null;
+  claimsTotal: number;
+  claimsClaimed: number;
+  claimsPending: number;
+  claimsExpired: number;
+  avgHoursToClaim?: number | null;
+  atRiskCount: number;
+  atRiskGoals: AtRiskGoal[];
+  inactiveThresholdDays: number;
+  completionByDimension?: DimensionCompletion[] | null;
+  stepFunnel?: FunnelStep[] | null;
+  resourceEngagement?: ResourceEngagement[] | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  metadataFilters?: Record<string, string> | null;
 }

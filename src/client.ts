@@ -7,6 +7,7 @@ import type {
   ExtUnfoldResponse,
   ExtClarifySubmitResponse,
   ExtImportResponse,
+  ExtAnalyticsResult,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.unfoldit.com";
@@ -67,6 +68,7 @@ export class UnfoldClient {
     priority?: string;
     claimExpiresInDays?: number;
     progressShare?: boolean;
+    metadata?: Record<string, string>;
   }): Promise<ExtGoalCreated> {
     return this.request<ExtGoalCreated>("POST", "/goals", {
       title: params.title,
@@ -79,6 +81,7 @@ export class UnfoldClient {
       progressShare: params.progressShare !== false
         ? { enabled: true }
         : undefined,
+      metadata: params.metadata,
     });
   }
 
@@ -89,14 +92,25 @@ export class UnfoldClient {
   async listGoals(params?: {
     status?: string;
     claimStatus?: string;
+    metadata?: string[];
+    assignedEmail?: string;
+    inactiveDays?: number;
     limit?: number;
     offset?: number;
   }): Promise<ExtGoalListResponse> {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.claimStatus) query.set("claimStatus", params.claimStatus);
+    if (params?.assignedEmail) query.set("assignedEmail", params.assignedEmail);
+    if (params?.inactiveDays) query.set("inactiveDays", String(params.inactiveDays));
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.offset) query.set("offset", String(params.offset));
+    // metadata is a repeatable param: metadata=track%3Dfrontend&metadata=cohort%3Dspring
+    if (params?.metadata) {
+      for (const tag of params.metadata) {
+        query.append("metadata", tag);
+      }
+    }
     const qs = query.toString();
     return this.request<ExtGoalListResponse>(
       "GET",
@@ -122,6 +136,7 @@ export class UnfoldClient {
     suggestResources?: boolean;
     claimExpiresInDays?: number;
     progressShare?: boolean;
+    metadata?: Record<string, string>;
   }): Promise<ExtUnfoldResponse> {
     return this.request<ExtUnfoldResponse>("POST", "/goals/unfold", {
       title: params.title,
@@ -137,6 +152,7 @@ export class UnfoldClient {
       progressShare: params.progressShare !== false
         ? { enabled: true }
         : undefined,
+      metadata: params.metadata,
     });
   }
 
@@ -158,6 +174,31 @@ export class UnfoldClient {
   }
 
   // Tier 3: Passthrough import
+
+  async getAnalytics(params?: {
+    groupBy?: string;
+    inactiveDays?: number;
+    includeFunnel?: boolean;
+    includeResources?: boolean;
+    metadata?: Record<string, string>;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<ExtAnalyticsResult> {
+    const query = new URLSearchParams();
+    if (params?.groupBy) query.set("groupBy", params.groupBy);
+    if (params?.inactiveDays) query.set("inactiveDays", String(params.inactiveDays));
+    if (params?.includeFunnel !== undefined) query.set("includeFunnel", String(params.includeFunnel));
+    if (params?.includeResources !== undefined) query.set("includeResources", String(params.includeResources));
+    if (params?.dateFrom) query.set("dateFrom", params.dateFrom);
+    if (params?.dateTo) query.set("dateTo", params.dateTo);
+    if (params?.metadata) {
+      for (const [key, value] of Object.entries(params.metadata)) {
+        query.append("metadata", `${key}=${value}`);
+      }
+    }
+    const qs = query.toString();
+    return this.request<ExtAnalyticsResult>("GET", `/analytics${qs ? `?${qs}` : ""}`);
+  }
 
   async importPlan(params: {
     title: string;

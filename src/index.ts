@@ -21,6 +21,7 @@ import { registerRevokeClaim } from "./tools/revoke-claim.js";
 import { registerGetClarification } from "./tools/get-clarification.js";
 import { registerSubmitClarification } from "./tools/submit-clarification.js";
 import { registerImportPlan } from "./tools/import-plan.js";
+import { registerGetAnalytics } from "./tools/get-analytics.js";
 
 // Read configuration from environment
 const apiKey = process.env.UNFOLD_API_KEY;
@@ -50,6 +51,7 @@ registerRevokeClaim(server, client);
 registerGetClarification(server, client);
 registerSubmitClarification(server, client);
 registerImportPlan(server, client);
+registerGetAnalytics(server, client);
 
 // Start server with stdio transport
 async function main() {

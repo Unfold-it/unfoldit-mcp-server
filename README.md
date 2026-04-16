@@ -1,8 +1,8 @@
 # Unfold It MCP Server
 
-Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, individual progress tracking, and cohort analytics.
+Connect AI assistants to [Unfold It](https://unfoldit.ai) -- create goals with AI-generated plans, agent-assisted clarification, plan import with enrichment, individual progress tracking, cohort analytics, and skill assessments.
 
-Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. Three autonomy tiers: fully autonomous, semi-auto with review, or import your own steps with AI enrichment. Tag goals with custom metadata to track and analyze entire cohorts.
+Built for platforms (academies, LMS tools, coaching apps) that want to use [Unfold It](https://unfoldit.ai) as their execution layer. Three autonomy tiers: fully autonomous, semi-auto with review, or import your own steps with AI enrichment. Generate skill assessments with AI-validated MCQs, score them, and automatically create targeted learning paths from the results. Tag goals with custom metadata to track and analyze entire cohorts.
 
 ## Quick Start
 
@@ -61,7 +61,22 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-## Available Tools (8)
+## API Key Scopes
+
+Your API key needs specific scopes depending on which tools you use:
+
+| Scope | Tools | Included by default? |
+|-------|-------|---------------------|
+| `goals:create` | create_goal, import_plan | Yes |
+| `goals:read` | get_goal_status, list_goals, get_analytics, get_clarification | Yes |
+| `claims:manage` | revoke_claim | Yes |
+| `assessment:generate` | generate_skill_assessment | **No** -- must be granted explicitly |
+| `assessment:score` | score_skill_assessment | **No** -- must be granted explicitly |
+| `assessment:read_capabilities` | get_assessment_capabilities | **No** -- must be granted explicitly |
+
+Assessment scopes are opt-in. Ask your org owner to enable them in the API Key settings.
+
+## Available Tools (11)
 
 ### create_goal
 
@@ -182,6 +197,49 @@ Invalidate a claim link so it can no longer be used.
 **Input:**
 - `claim_token` (required) -- The token from the claim link URL
 
+### generate_skill_assessment
+
+Generate a skill-proficiency assessment (MCQs) for a learner. Questions are AI-generated and validated (structural + semantic checks) before being returned. Returns a signed `assessment_token` that the learner's answers are scored against.
+
+**Input:**
+- `work_item_context` (required) -- The work item the learner is preparing for:
+  - `title` (required) -- Work item title
+  - `description` -- Work item description (max 2000 chars)
+  - `domain_tags` -- Tags for question anchoring
+- `skill` (required) -- Skill to assess (e.g. "Python", "SQL", "Project Management")
+- `target_proficiency` (required) -- Band the learner should reach: "beginner", "low", "medium", "high"
+- `num_questions` (required) -- Number of MCQs to generate (3-20)
+- `difficulty_mix` -- Distribution as `{easy, medium, hard}` floats summing to 1.0. Default: `{easy: 0.2, medium: 0.5, hard: 0.3}`
+- `band_thresholds` -- Custom proficiency band ranges. Default: beginner [0,10], low [11,50], medium [51,85], high [86,100]
+- `language` -- ISO language code (default: "en")
+- `request_id` (required) -- Idempotency key. Same request_id returns the same assessment.
+
+**Returns:** `assessment_token`, `questions[]` (stem, options, difficulty, skill_facet), `band_map`, `max_raw_score`, `target_band`, `model_meta`
+
+**Requires scope:** `assessment:generate`
+
+### score_skill_assessment
+
+Score a submitted assessment using the signed `assessment_token` from `generate_skill_assessment`. Returns the learner's proficiency band, gap vs target, and per-question results. When the learner falls short, includes a `suggested_goal_seed` you can pass to `create_goal` to create a targeted learning path.
+
+**Input:**
+- `assessment_token` (required) -- The signed token from generate_skill_assessment
+- `answers` (required) -- Array of `{question_id, selected_option_id}` (at least one)
+- `band_thresholds` -- Optional override of proficiency band ranges (defaults to the thresholds embedded in the token)
+- `request_id` (required) -- Idempotency key
+
+**Returns:** `raw_score`, `max_raw_score`, `raw_pct`, `band`, `target_band`, `gap_bands`, `per_question[]`, `recommended_action` (none / create_unfold_goal), `suggested_goal_seed`
+
+**Requires scope:** `assessment:score`
+
+### get_assessment_capabilities
+
+Get supported parameters for skill assessments. Use this to introspect before calling `generate_skill_assessment`. No input parameters required.
+
+**Returns:** `schema_version`, `supported_languages`, `min_questions`, `max_questions`, `supported_proficiency_bands`, `default_band_thresholds`, `default_difficulty_mix`, `open_domain`, `token_ttl_seconds`
+
+**Requires scope:** `assessment:read_capabilities`
+
 ## How It Works
 
 ### Tier 1 -- Semi-Auto (Review agent suggestions)
@@ -207,6 +265,16 @@ Invalidate a claim link so it can no longer be used.
 3. Plan is ready immediately (no clarification needed)
 4. Get a claim link and enriched step metadata
 
+### Assess-then-Learn (Assessment to goal)
+
+1. Call `get_assessment_capabilities` to check supported skills and defaults
+2. Call `generate_skill_assessment` with the skill, target proficiency, and work item context
+3. Present questions to the learner in your UI
+4. Call `score_skill_assessment` with the token and the learner's answers
+5. If `gap_bands > 0`, use `suggested_goal_seed` to call `create_goal` with the assessment data in `additional_context` (see [payload convention](https://github.com/Unfold-it/unfoldit-mcp-server#assessment-payload-convention))
+6. Unfold generates a plan that focuses on the learner's weak areas
+7. Send the claim link to the learner
+
 ## Example Prompts
 
 > "Create a Python certification learning path for a beginner with 2 hours per week for 3 months."
@@ -218,6 +286,10 @@ Invalidate a claim link so it can no longer be used.
 > "Show me all goals where the claim link hasn't been used yet."
 
 > "What's the progress on goal abc-123? Has the learner started?"
+
+> "Generate a Python assessment with 8 questions for someone who needs medium proficiency to work on the ML pipeline."
+
+> "Score this assessment and create a goal from the results if the learner didn't reach the target."
 
 ## Getting an API Key
 

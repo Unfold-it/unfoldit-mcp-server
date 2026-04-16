@@ -22,6 +22,9 @@ import { registerGetClarification } from "./tools/get-clarification.js";
 import { registerSubmitClarification } from "./tools/submit-clarification.js";
 import { registerImportPlan } from "./tools/import-plan.js";
 import { registerGetAnalytics } from "./tools/get-analytics.js";
+import { registerGenerateAssessment } from "./tools/generate-assessment.js";
+import { registerScoreAssessment } from "./tools/score-assessment.js";
+import { registerGetAssessmentCapabilities } from "./tools/get-assessment-capabilities.js";
 
 // Read configuration from environment
 const apiKey = process.env.UNFOLD_API_KEY;
@@ -52,6 +55,9 @@ registerGetClarification(server, client);
 registerSubmitClarification(server, client);
 registerImportPlan(server, client);
 registerGetAnalytics(server, client);
+registerGenerateAssessment(server, client);
+registerScoreAssessment(server, client);
+registerGetAssessmentCapabilities(server, client);
 
 // Start server with stdio transport
 async function main() {

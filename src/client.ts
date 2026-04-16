@@ -8,6 +8,9 @@ import type {
   ExtClarifySubmitResponse,
   ExtImportResponse,
   ExtAnalyticsResult,
+  GenerateAssessmentResponse,
+  ScoreAssessmentResponse,
+  AssessmentCapabilities,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.unfoldit.com";
@@ -240,5 +243,48 @@ export class UnfoldClient {
         ? { enabled: true }
         : undefined,
     });
+  }
+
+  // Skill Assessment MCP tools
+
+  async generateAssessment(params: {
+    work_item_context: {
+      title: string;
+      description?: string;
+      domain_tags?: string[];
+    };
+    skill: string;
+    target_proficiency: string;
+    num_questions: number;
+    difficulty_mix?: Record<string, number>;
+    band_thresholds?: Record<string, number[]>;
+    language?: string;
+    request_id: string;
+  }): Promise<GenerateAssessmentResponse> {
+    return this.request<GenerateAssessmentResponse>(
+      "POST",
+      "/assessments/generate",
+      params,
+    );
+  }
+
+  async scoreAssessment(params: {
+    assessment_token: string;
+    answers: Array<{ question_id: string; selected_option_id: string }>;
+    band_thresholds?: Record<string, number[]>;
+    request_id: string;
+  }): Promise<ScoreAssessmentResponse> {
+    return this.request<ScoreAssessmentResponse>(
+      "POST",
+      "/assessments/score",
+      params,
+    );
+  }
+
+  async getAssessmentCapabilities(): Promise<AssessmentCapabilities> {
+    return this.request<AssessmentCapabilities>(
+      "GET",
+      "/assessments/capabilities",
+    );
   }
 }

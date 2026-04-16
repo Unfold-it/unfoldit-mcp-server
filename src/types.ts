@@ -134,6 +134,76 @@ export interface ExtImportResponse {
   progressLink?: string;
 }
 
+// Skill Assessment types
+
+export interface AssessmentOption {
+  id: string;
+  text: string;
+}
+
+export interface AssessmentQuestion {
+  id: string;
+  stem: string;
+  options: AssessmentOption[];
+  score_weight: number;
+  difficulty: string;
+  skill_facet?: string | null;
+}
+
+export interface AssessmentModelMeta {
+  provider: string;
+  model_id: string;
+  generated_at: string;
+  validator_passes: string[];
+  warnings: string[];
+}
+
+export interface GenerateAssessmentResponse {
+  assessment_token: string;
+  questions: AssessmentQuestion[];
+  band_map: Record<string, number[]>;
+  max_raw_score: number;
+  target_band: string;
+  model_meta: AssessmentModelMeta;
+}
+
+export interface PerQuestionResult {
+  question_id: string;
+  correct: boolean;
+  awarded: number;
+}
+
+export interface SuggestedGoalSeed {
+  title: string;
+  summary: string;
+  skill_focus: string;
+  target_proficiency: string;
+}
+
+export interface ScoreAssessmentResponse {
+  raw_score: number;
+  max_raw_score: number;
+  raw_pct: number;
+  band: string;
+  target_band: string;
+  gap_bands: number;
+  per_question: PerQuestionResult[];
+  recommended_action: string;
+  suggested_goal_seed?: SuggestedGoalSeed | null;
+}
+
+export interface AssessmentCapabilities {
+  schema_version: string;
+  supported_languages: string[];
+  min_questions: number;
+  max_questions: number;
+  supported_proficiency_bands: string[];
+  default_band_thresholds: Record<string, number[]>;
+  default_difficulty_mix: Record<string, number>;
+  open_domain: boolean;
+  token_ttl_seconds: number;
+}
+
 // Analytics types
 
 export interface AtRiskGoal {

@@ -47,6 +47,25 @@ Each goal is for one user. Call this once per learner/user.`,
         .describe("Generate an embeddable progress report link"),
       metadata: z.record(z.string()).optional()
         .describe("Custom key-value tags for filtering and analytics (e.g. {cohort: 'spring-2026', track: 'frontend', department: 'engineering'}). Used in get_analytics to group and filter results."),
+      category: z.enum(["learning", "health_adhd", "general"]).optional()
+        .describe("Goal category for resource routing. Auto-detected from title if omitted. 'learning' = technical skills, courses, upskilling. 'health_adhd' = ADHD management, executive function, habit building. 'general' = everything else."),
+      resource_world: z.object({
+        preferred_sources: z.array(z.string()).optional()
+          .describe("Domain names to prefer for resources, e.g. ['docs.anthropic.com', 'udemy.com']"),
+        excluded_sources: z.array(z.string()).optional()
+          .describe("Domain names to exclude from resource results"),
+        youtube_playlists: z.array(z.string()).optional()
+          .describe("YouTube playlist URLs to search first for resources"),
+        lms_search_endpoint: z.string().optional()
+          .describe("Custom LMS search API endpoint URL"),
+        content_policies: z.object({
+          prefer_video_ratio: z.number().min(0).max(1).optional()
+            .describe("0.0-1.0, how much to prefer video resources"),
+          max_resources_per_step: z.number().min(1).max(10).optional(),
+          certification_preferred: z.boolean().optional(),
+        }).optional(),
+      }).optional()
+        .describe("Per-goal resource config. Overrides org defaults for this goal's resource discovery."),
     },
     async (params) => {
       const result = await client.unfoldGoal({
@@ -60,6 +79,8 @@ Each goal is for one user. Call this once per learner/user.`,
         claimExpiresInDays: params.claim_expires_in_days,
         progressShare: params.progress_share,
         metadata: params.metadata,
+        category: params.category,
+        resourceWorld: params.resource_world,
       });
 
       return {

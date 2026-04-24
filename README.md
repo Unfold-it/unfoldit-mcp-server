@@ -67,7 +67,7 @@ Your API key needs specific scopes depending on which tools you use:
 
 | Scope | Tools | Included by default? |
 |-------|-------|---------------------|
-| `goals:create` | create_goal, import_plan | Yes |
+| `goals:create` | create_goal, unfold_goal, submit_clarification, import_plan | Yes |
 | `goals:read` | get_goal_status, list_goals, get_analytics, get_clarification | Yes |
 | `claims:manage` | revoke_claim | Yes |
 | `assessment:generate` | generate_skill_assessment | **No** -- must be granted explicitly |
@@ -100,6 +100,13 @@ Create a goal with an AI-generated plan. The agent auto-answers clarification qu
 - `claim_expires_in_days` -- Claim link validity (default: 30)
 - `progress_share` -- Generate embeddable progress link (default: true)
 - `metadata` -- Custom key-value tags for analytics grouping, e.g. `{ cohort: "spring-2026", track: "frontend" }`
+- `category` -- Resource category hint: "learning", "health_adhd", or "general". Auto-detected from goal title and description if not provided. Determines which sources and search strategies are used when attaching resources to substeps.
+- `resource_world` -- Override resource discovery for this goal:
+  - `preferred_sources` -- Source domains to prioritise, e.g. `["coursera.org", "docs.python.org"]`
+  - `excluded_sources` -- Source domains to suppress
+  - `youtube_playlists` -- YouTube playlist IDs to draw resources from
+  - `lms_search_endpoint` -- Custom LMS search endpoint URL
+  - `content_policies` -- `{ require_verified_sources, show_disclaimer, disclaimer_text }`
 
 **Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`
 

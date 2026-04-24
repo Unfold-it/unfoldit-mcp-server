@@ -140,6 +140,8 @@ export class UnfoldClient {
     claimExpiresInDays?: number;
     progressShare?: boolean;
     metadata?: Record<string, string>;
+    category?: string;
+    resourceWorld?: Record<string, unknown>;
   }): Promise<ExtUnfoldResponse> {
     return this.request<ExtUnfoldResponse>("POST", "/goals/unfold", {
       title: params.title,
@@ -156,6 +158,8 @@ export class UnfoldClient {
         ? { enabled: true }
         : undefined,
       metadata: params.metadata,
+      category: params.category,
+      resourceWorld: params.resourceWorld,
     });
   }
 

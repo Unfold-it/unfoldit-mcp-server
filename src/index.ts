@@ -25,6 +25,7 @@ import { registerGetAnalytics } from "./tools/get-analytics.js";
 import { registerGenerateAssessment } from "./tools/generate-assessment.js";
 import { registerScoreAssessment } from "./tools/score-assessment.js";
 import { registerGetAssessmentCapabilities } from "./tools/get-assessment-capabilities.js";
+import { registerListResourceCategories } from "./tools/list-resource-categories.js";
 
 // Read configuration from environment
 const apiKey = process.env.UNFOLD_API_KEY;
@@ -43,7 +44,7 @@ const client = new UnfoldClient(apiKey, apiUrl);
 
 const server = new McpServer({
   name: "unfold",
-  version: "0.4.0",
+  version: "0.5.0",
 });
 
 // Register all tools
@@ -58,6 +59,7 @@ registerGetAnalytics(server, client);
 registerGenerateAssessment(server, client);
 registerScoreAssessment(server, client);
 registerGetAssessmentCapabilities(server, client);
+registerListResourceCategories(server, client);
 
 // Start server with stdio transport
 async function main() {

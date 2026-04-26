@@ -11,6 +11,7 @@ import type {
   GenerateAssessmentResponse,
   ScoreAssessmentResponse,
   AssessmentCapabilities,
+  ResourceCategory,
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.unfoldit.com";
@@ -108,9 +109,14 @@ export class UnfoldClient {
     return this.request<ExtGoalStatus>("GET", `/goals/${goalId}`);
   }
 
+  async listResourceCategories(): Promise<ResourceCategory[]> {
+    return this.request<ResourceCategory[]>("GET", "/goals/resource-categories");
+  }
+
   async listGoals(params?: {
     status?: string;
     claimStatus?: string;
+    category?: string;
     metadata?: string[];
     assignedEmail?: string;
     inactiveDays?: number;
@@ -120,6 +126,7 @@ export class UnfoldClient {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.claimStatus) query.set("claimStatus", params.claimStatus);
+    if (params?.category) query.set("category", params.category);
     if (params?.assignedEmail) query.set("assignedEmail", params.assignedEmail);
     if (params?.inactiveDays) query.set("inactiveDays", String(params.inactiveDays));
     if (params?.limit) query.set("limit", String(params.limit));

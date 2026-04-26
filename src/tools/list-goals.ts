@@ -20,6 +20,8 @@ For aggregate cohort metrics, use get_analytics instead.`,
         .optional().describe("Filter by goal status"),
       claim_status: z.enum(["unclaimed", "claimed", "expired", "revoked"])
         .optional().describe("Filter by claim link status"),
+      category: z.enum(["learning", "health_adhd", "general"])
+        .optional().describe("Filter by resource category. Use this to segment ADHD goals from learning goals."),
       metadata: z.array(z.string()).optional()
         .describe("Filter by metadata tag(s) in 'key=value' format. Repeatable for AND logic. E.g. ['track=frontend', 'cohort=spring-2026']"),
       assigned_email: z.string().email().optional()
@@ -34,6 +36,7 @@ For aggregate cohort metrics, use get_analytics instead.`,
         const result = await client.listGoals({
           status: params.status,
           claimStatus: params.claim_status,
+          category: params.category,
           metadata: params.metadata,
           assignedEmail: params.assigned_email,
           inactiveDays: params.inactive_days,

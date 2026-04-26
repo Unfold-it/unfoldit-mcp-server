@@ -55,8 +55,18 @@ export interface ExtGoalStatus {
   progress: ExtProgress;
   progressLink: string | null;
   lastActivityAt: string | null;
+  resourceCategory?: string | null;
   metadata?: Record<string, string> | null;
   steps?: ExtStepStatus[] | null;
+}
+
+export interface ResourceCategory {
+  id: string;
+  name: string;
+  description: string;
+  activeProviders: string[];
+  showDisclaimer: boolean;
+  disclaimerText: string | null;
 }
 
 export interface ExtGoalListResponse {

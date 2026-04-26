@@ -30,21 +30,29 @@ For aggregate cohort metrics, use get_analytics instead.`,
       offset: z.number().min(0).default(0).describe("Pagination offset"),
     },
     async (params) => {
-      const result = await client.listGoals({
-        status: params.status,
-        claimStatus: params.claim_status,
-        metadata: params.metadata,
-        assignedEmail: params.assigned_email,
-        inactiveDays: params.inactive_days,
-        limit: params.limit,
-        offset: params.offset,
-      });
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+      try {
+        const result = await client.listGoals({
+          status: params.status,
+          claimStatus: params.claim_status,
+          metadata: params.metadata,
+          assignedEmail: params.assigned_email,
+          inactiveDays: params.inactive_days,
+          limit: params.limit,
+          offset: params.offset,
+        });
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

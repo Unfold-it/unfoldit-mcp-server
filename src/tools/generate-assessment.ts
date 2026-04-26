@@ -33,26 +33,34 @@ Requires the "assessment:generate" scope on your org API key.`,
       request_id: z.string().describe("Client-supplied idempotency key. Same request_id returns the same assessment."),
     },
     async (params) => {
-      const result = await client.generateAssessment({
-        work_item_context: {
-          title: params.work_item_context.title,
-          description: params.work_item_context.description,
-          domain_tags: params.work_item_context.domain_tags,
-        },
-        skill: params.skill,
-        target_proficiency: params.target_proficiency,
-        num_questions: params.num_questions,
-        difficulty_mix: params.difficulty_mix,
-        band_thresholds: params.band_thresholds,
-        language: params.language,
-        request_id: params.request_id,
-      });
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+      try {
+        const result = await client.generateAssessment({
+          work_item_context: {
+            title: params.work_item_context.title,
+            description: params.work_item_context.description,
+            domain_tags: params.work_item_context.domain_tags,
+          },
+          skill: params.skill,
+          target_proficiency: params.target_proficiency,
+          num_questions: params.num_questions,
+          difficulty_mix: params.difficulty_mix,
+          band_thresholds: params.band_thresholds,
+          language: params.language,
+          request_id: params.request_id,
+        });
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

@@ -14,6 +14,10 @@ import type {
 } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api.unfoldit.com";
+const DEFAULT_TIMEOUT_MS = parseInt(
+  process.env.UNFOLD_MCP_REQUEST_TIMEOUT_MS || "30000",
+  10
+);
 
 export class UnfoldClient {
   private baseUrl: string;
@@ -27,7 +31,8 @@ export class UnfoldClient {
   private async request<T>(
     method: string,
     path: string,
-    body?: unknown
+    body?: unknown,
+    timeoutMs: number = DEFAULT_TIMEOUT_MS
   ): Promise<T> {
     const url = `${this.baseUrl}/api/v1/ext${path}`;
     const headers: Record<string, string> = {
@@ -35,17 +40,28 @@ export class UnfoldClient {
       "Content-Type": "application/json",
     };
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "TimeoutError") {
+        throw new Error(
+          `Request timed out after ${timeoutMs}ms: ${method} ${path}`
+        );
+      }
+      throw err;
+    }
 
     if (!res.ok) {
       let detail = "";
       try {
         const err = await res.json();
-        detail = typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail);
+        detail = typeof err.detail === "string" ? err.detail : JSON.stringify(err);
       } catch {
         detail = await res.text();
       }
@@ -143,6 +159,9 @@ export class UnfoldClient {
     category?: string;
     resourceWorld?: Record<string, unknown>;
   }): Promise<ExtUnfoldResponse> {
+    // Tier 1 (auto_respond=false) runs synchronous LLM work (40s backend budget);
+    // Tier 2 (auto_respond=true) returns immediately after DB write.
+    const timeout = (params.autoRespond ?? true) ? 10_000 : 45_000;
     return this.request<ExtUnfoldResponse>("POST", "/goals/unfold", {
       title: params.title,
       description: params.description,
@@ -160,7 +179,7 @@ export class UnfoldClient {
       metadata: params.metadata,
       category: params.category,
       resourceWorld: params.resourceWorld,
-    });
+    }, timeout);
   }
 
   async submitClarification(
@@ -234,6 +253,8 @@ export class UnfoldClient {
     claimExpiresInDays?: number;
     progressShare?: boolean;
   }): Promise<ExtImportResponse> {
+    // enrich=true runs a synchronous LLM call (15s backend budget)
+    const timeout = (params.enrich ?? true) ? 20_000 : 10_000;
     return this.request<ExtImportResponse>("POST", "/goals/import", {
       title: params.title,
       description: params.description,
@@ -246,7 +267,7 @@ export class UnfoldClient {
       progressShare: params.progressShare !== false
         ? { enabled: true }
         : undefined,
-    });
+    }, timeout);
   }
 
   // Skill Assessment MCP tools
@@ -265,10 +286,12 @@ export class UnfoldClient {
     language?: string;
     request_id: string;
   }): Promise<GenerateAssessmentResponse> {
+    // 200s backend budget for generate + validate + retry pipeline
     return this.request<GenerateAssessmentResponse>(
       "POST",
       "/assessments/generate",
       params,
+      210_000,
     );
   }
 

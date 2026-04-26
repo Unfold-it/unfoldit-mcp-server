@@ -21,17 +21,25 @@ check when planGenerationStatus changes to "completed".`,
         .describe("Accept agent-suggested answers for questions not in your answers."),
     },
     async (params) => {
-      const result = await client.submitClarification(params.goal_id, {
-        answers: params.answers,
-        acceptAgentAnswers: params.accept_agent_answers,
-      });
+      try {
+        const result = await client.submitClarification(params.goal_id, {
+          answers: params.answers,
+          acceptAgentAnswers: params.accept_agent_answers,
+        });
 
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

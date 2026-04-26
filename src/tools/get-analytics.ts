@@ -44,22 +44,30 @@ Examples:
         .describe("ISO date (YYYY-MM-DD). Only include goals created on or before this date."),
     },
     async (params) => {
-      const result = await client.getAnalytics({
-        groupBy: params.group_by,
-        inactiveDays: params.inactive_days,
-        includeFunnel: params.include_funnel,
-        includeResources: params.include_resources,
-        metadata: params.metadata,
-        dateFrom: params.date_from,
-        dateTo: params.date_to,
-      });
+      try {
+        const result = await client.getAnalytics({
+          groupBy: params.group_by,
+          inactiveDays: params.inactive_days,
+          includeFunnel: params.include_funnel,
+          includeResources: params.include_resources,
+          metadata: params.metadata,
+          dateFrom: params.date_from,
+          dateTo: params.date_to,
+        });
 
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

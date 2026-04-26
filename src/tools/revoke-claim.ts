@@ -13,13 +13,21 @@ Use this if a link was sent to the wrong person or needs to be regenerated.`,
       claim_token: z.string().describe("The claim token from the claim link URL (the part after /claim/)"),
     },
     async (params) => {
-      await client.revokeClaim(params.claim_token);
-      return {
-        content: [{
-          type: "text" as const,
-          text: "Claim link revoked successfully.",
-        }],
-      };
+      try {
+        await client.revokeClaim(params.claim_token);
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Claim link revoked successfully.",
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

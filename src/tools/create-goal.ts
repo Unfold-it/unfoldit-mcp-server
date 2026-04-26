@@ -68,27 +68,35 @@ Each goal is for one user. Call this once per learner/user.`,
         .describe("Per-goal resource config. Overrides org defaults for this goal's resource discovery."),
     },
     async (params) => {
-      const result = await client.unfoldGoal({
-        title: params.title,
-        description: params.description,
-        context: params.context as Record<string, unknown> | undefined,
-        goalContext: params.goal_context,
-        priority: params.priority,
-        autoRespond: params.auto_respond,
-        clarificationAnswers: params.clarification_answers,
-        claimExpiresInDays: params.claim_expires_in_days,
-        progressShare: params.progress_share,
-        metadata: params.metadata,
-        category: params.category,
-        resourceWorld: params.resource_world,
-      });
+      try {
+        const result = await client.unfoldGoal({
+          title: params.title,
+          description: params.description,
+          context: params.context as Record<string, unknown> | undefined,
+          goalContext: params.goal_context,
+          priority: params.priority,
+          autoRespond: params.auto_respond,
+          clarificationAnswers: params.clarification_answers,
+          claimExpiresInDays: params.claim_expires_in_days,
+          progressShare: params.progress_share,
+          metadata: params.metadata,
+          category: params.category,
+          resourceWorld: params.resource_world,
+        });
 
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

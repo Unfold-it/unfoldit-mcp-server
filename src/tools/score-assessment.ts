@@ -28,18 +28,26 @@ Requires the "assessment:score" scope on your org API key.`,
       request_id: z.string().describe("Client-supplied idempotency key"),
     },
     async (params) => {
-      const result = await client.scoreAssessment({
-        assessment_token: params.assessment_token,
-        answers: params.answers,
-        band_thresholds: params.band_thresholds,
-        request_id: params.request_id,
-      });
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+      try {
+        const result = await client.scoreAssessment({
+          assessment_token: params.assessment_token,
+          answers: params.answers,
+          band_thresholds: params.band_thresholds,
+          request_id: params.request_id,
+        });
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

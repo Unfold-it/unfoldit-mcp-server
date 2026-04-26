@@ -44,32 +44,40 @@ Returns the goal with a claim link and the enriched step list.`,
       progress_share: z.boolean().default(true),
     },
     async (params) => {
-      const result = await client.importPlan({
-        title: params.title,
-        description: params.description,
-        steps: params.steps,
-        goalContext: params.goal_context,
-        priority: params.priority,
-        enrich: params.enrich,
-        enrichOptions: params.enrich_options ? {
-          dependencies: params.enrich_options.dependencies,
-          criticalPath: params.enrich_options.critical_path,
-          durationEstimates: params.enrich_options.duration_estimates,
-          severity: params.enrich_options.severity,
-          complexity: params.enrich_options.complexity,
-          quickWins: params.enrich_options.quick_wins,
-          resources: params.enrich_options.resources,
-        } : undefined,
-        claimExpiresInDays: params.claim_expires_in_days,
-        progressShare: params.progress_share,
-      });
+      try {
+        const result = await client.importPlan({
+          title: params.title,
+          description: params.description,
+          steps: params.steps,
+          goalContext: params.goal_context,
+          priority: params.priority,
+          enrich: params.enrich,
+          enrichOptions: params.enrich_options ? {
+            dependencies: params.enrich_options.dependencies,
+            criticalPath: params.enrich_options.critical_path,
+            durationEstimates: params.enrich_options.duration_estimates,
+            severity: params.enrich_options.severity,
+            complexity: params.enrich_options.complexity,
+            quickWins: params.enrich_options.quick_wins,
+            resources: params.enrich_options.resources,
+          } : undefined,
+          claimExpiresInDays: params.claim_expires_in_days,
+          progressShare: params.progress_share,
+        });
 
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

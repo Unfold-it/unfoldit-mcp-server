@@ -16,13 +16,21 @@ parameters required.
 Requires the "assessment:read_capabilities" scope on your org API key.`,
     {},
     async () => {
-      const result = await client.getAssessmentCapabilities();
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(result, null, 2),
-        }],
-      };
+      try {
+        const result = await client.getAssessmentCapabilities();
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text" as const, text: `Error: ${message}` }],
+          isError: true,
+        };
+      }
     }
   );
 }

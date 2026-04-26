@@ -76,7 +76,7 @@ Your API key needs specific scopes depending on which tools you use:
 
 Assessment scopes are opt-in. Ask your org owner to enable them in the API Key settings.
 
-## Available Tools (11)
+## Available Tools (12)
 
 ### create_goal
 
@@ -117,7 +117,7 @@ Get the current status and full step-by-step detail of a goal. Returns individua
 **Input:**
 - `goal_id` (required) -- The goal ID from create_goal
 
-**Returns:** Goal status, `progress`, `steps[]` (with per-step detail when plan is ready), `metadata`, `claimCreatedAt`, `claimedAt`, `assignedTo`, `agentAnswersUsed`
+**Returns:** Goal status, `progress`, `resourceCategory`, `steps[]` (with per-step detail when plan is ready), `metadata`, `claimCreatedAt`, `claimedAt`, `assignedTo`, `agentAnswersUsed`
 
 ### get_analytics
 
@@ -182,20 +182,29 @@ Import a pre-formulated plan with steps and substeps. Skips clarification entire
 
 **Returns:** `goalId`, `planId`, enriched `steps[]` with metadata, `claimLink`
 
+### list_resource_categories
+
+List available resource categories for goal classification. Returns each category's active providers, content safety policies, and disclaimer text. Use this to build adaptive UIs or to discover which categories are available before creating goals.
+
+**Input:** None
+
+**Returns:** Array of categories, each with `id`, `name`, `description`, `activeProviders`, `showDisclaimer`, `disclaimerText`
+
 ### list_goals
 
-List all goals in your org with optional filters. Use `metadata` to filter to a cohort, `assigned_email` to look up a specific learner, or `inactive_days` to find at-risk goals without pulling full analytics.
+List all goals in your org with optional filters. Use `metadata` to filter to a cohort, `category` to segment by goal type, `assigned_email` to look up a specific learner, or `inactive_days` to find at-risk goals without pulling full analytics.
 
 **Input:**
 - `status` -- Filter by goal status (draft, in_progress, completed, blocked, paused)
 - `claim_status` -- Filter by claim status (unclaimed, claimed, expired, revoked)
+- `category` -- Filter by resource category (learning, health_adhd, general). Use this to segment ADHD goals from learning goals in a mixed cohort.
 - `metadata` -- Filter by metadata tag(s) in "key=value" format, e.g. `["track=frontend", "cohort=spring-2026"]`
 - `assigned_email` -- Return only the goal assigned to this learner email
 - `inactive_days` -- Return only goals with no step activity in the last N days (1-365)
 - `limit` -- Max results (default: 50)
 - `offset` -- Pagination offset
 
-**Returns:** Array of goal statuses with `progress`, `metadata`, `claimCreatedAt`, `claimedAt`
+**Returns:** Array of goal statuses with `progress`, `resourceCategory`, `metadata`, `claimCreatedAt`, `claimedAt`
 
 ### revoke_claim
 
@@ -289,6 +298,10 @@ Get supported parameters for skill assessments. Use this to introspect before ca
 > "Import our Jira sprint backlog as a goal with dependencies and time estimates."
 
 > "Create a coaching plan for Sarah but let me review the questions before generating the plan."
+
+> "Create an ADHD morning routine coaching plan with category health_adhd for a patient who struggles with time blindness."
+
+> "List all health_adhd goals in the spring cohort and show me which ones are at risk."
 
 > "Show me all goals where the claim link hasn't been used yet."
 

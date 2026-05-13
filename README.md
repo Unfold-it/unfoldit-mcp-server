@@ -107,8 +107,14 @@ Create a goal with an AI-generated plan. The agent auto-answers clarification qu
   - `youtube_playlists` -- YouTube playlist IDs to draw resources from
   - `lms_search_endpoint` -- Custom LMS search endpoint URL
   - `content_policies` -- `{ require_verified_sources, show_disclaimer, disclaimer_text }`
+- `assessment` (since v0.7.0) -- Structured assessment input the planner uses to bias step selection. Discriminated by `assessment_type`:
+  - `skill_proficiency` v1 -- Drop the `score_skill_assessment` response straight in. The planner prioritises weak facets, compresses strong ones, and anchors steps in `work_item_context`.
+  - `clinical_intake` v1 -- ADHD / coaching / clinical context. Wire shape is locked; the prompt builder is currently stubbed and returns `assessment_type_not_supported` until a real partner drives it. Sensitive type -- requires superadmin enablement per org.
+  - `general` v1 -- Catch-all for assessment data that does not fit either typed shape. Treated as soft hints; only `constraints` honoured as hard limits.
 
-**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`
+  See [GUIDE_ASSESSMENT_TO_PLAN_MCP](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md) for the canonical end-to-end walkthrough.
+
+**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`, `warnings` (always present, empty when none)
 
 ### get_goal_status
 
@@ -244,7 +250,9 @@ Score a submitted assessment using the signed `assessment_token` from `generate_
 - `band_thresholds` -- Optional override of proficiency band ranges (defaults to the thresholds embedded in the token)
 - `request_id` (required) -- Idempotency key
 
-**Returns:** `raw_score`, `max_raw_score`, `raw_pct`, `band`, `target_band`, `gap_bands`, `per_question[]`, `recommended_action` (none / create_unfold_goal), `suggested_goal_seed`
+**Returns:** `raw_score`, `max_raw_score`, `raw_pct`, `band`, `target_band`, `gap_bands`, `per_question[]`, `per_facet[]` (server-side aggregation per sub-skill with `total`, `correct`, `raw_pct`, `classification: weak | strong | mixed`), `weak_facets[]`, `strong_facets[]`, `facet_coverage` (`full` | `partial` | `difficulty_fallback`), `recommended_action` (none / create_unfold_goal), `suggested_goal_seed`
+
+> **Chaining tip:** This response is shape-compatible with `create_goal`'s new `assessment` field (skill_proficiency v1). Drop it in with three header fields added (`assessment_type: "skill_proficiency"`, `schema_version: "v1"`, `assessed_at: <ISO timestamp>`) and the planner uses it directly. No client-side join logic, no threshold tuning.
 
 **Requires scope:** `assessment:score`
 
@@ -281,15 +289,19 @@ Get supported parameters for skill assessments. Use this to introspect before ca
 3. Plan is ready immediately (no clarification needed)
 4. Get a claim link and enriched step metadata
 
-### Assess-then-Learn (Assessment to goal)
+### Assess-then-Learn (Assessment to goal) [updated v0.7.0]
 
-1. Call `get_assessment_capabilities` to check supported skills and defaults
-2. Call `generate_skill_assessment` with the skill, target proficiency, and work item context
-3. Present questions to the learner in your UI
-4. Call `score_skill_assessment` with the token and the learner's answers
-5. If `gap_bands > 0`, use `suggested_goal_seed` to call `create_goal` with the assessment data in `additional_context` (see [payload convention](https://github.com/Unfold-it/unfoldit-mcp-server#assessment-payload-convention))
-6. Unfold generates a plan that focuses on the learner's weak areas
-7. Send the claim link to the learner
+The canonical chain that turns a scored assessment into a personalised plan, with no client-side join logic:
+
+1. Call `generate_skill_assessment` with the skill, target proficiency, and work item context
+2. Present questions to the learner in your UI
+3. Call `score_skill_assessment` with the token and the learner's answers. Response includes `per_facet`, `weak_facets`, `strong_facets`, `facet_coverage` (server-side aggregation).
+4. Call `create_goal` with the score response dropped into the new `assessment` field (skill_proficiency v1). The planner uses weak/strong facets to bias steps and anchors them in `work_item_context`.
+5. Send the claim link to the learner.
+
+Full walkthrough with payload examples for `skill_proficiency`, `general`, and `clinical_intake` lives at [GUIDE_ASSESSMENT_TO_PLAN_MCP](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md).
+
+> **Legacy path.** Pre-v0.7.0 integrations stuffed the score into `additional_context.unfold_assessment` per the [payload convention](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_PAYLOAD_CONVENTION.md). That still works on `POST /api/v1/ext/goals` for backwards compat; behind the scenes both paths now route through the same prompt-builder registry. New integrations should use the structured `assessment` field on `create_goal`.
 
 ## Example Prompts
 
@@ -319,11 +331,44 @@ Get supported parameters for skill assessments. Use this to introspect before ca
 4. Scroll to **API Keys** section
 5. Click **+ Create Key**, give it a name, and copy the key
 
+## Typed errors and warnings (v0.7.0+)
+
+When a tool fails with a typed error, the response is a structured JSON envelope rather than a stringified message. Branch on `error_code`:
+
+| `error_code` | When | Notes |
+|---|---|---|
+| `models_not_configured` | BYO provider role is not configured | Response includes `settings_url` |
+| `provider_unauthorized` | BYO provider key rejected | Includes `settings_url` and `switch_to_unfold_ai` CTA |
+| `provider_quota_exceeded` | BYO provider returned quota/billing error | Includes `switch_to_unfold_ai` CTA |
+| `provider_unavailable` | BYO provider 5xx or circuit breaker open | Transient; retry later |
+| `assessment_type_not_supported` | `assessment_type` recognised but builder not yet wired | Response includes `supported` list |
+| `assessment_type_not_enabled_for_org` | Tenant has not opted into this assessment type | Sensitive types (clinical_intake) need superadmin enablement |
+| `token_invalid` / `assessment_expired` | Assessment token tampered or past TTL | Regenerate via generate_skill_assessment |
+| `idempotency_conflict` | Same request_id used with different request body | Pick a new request_id |
+| `validation_failed` | Generation output failed validation after retry budget | Retry with different request_id |
+
+Successful responses on goal creation also carry `warnings: ApiWarning[]` (always present, empty when none). Known warning codes:
+
+| `code` | When |
+|---|---|
+| `category_assessment_type_mismatch` | `category` and `assessment.assessment_type` disagree. Plan was generated using assessment_type. |
+| `duplicate_assessment_input` | Both structured `assessment` field and legacy `additional_context.unfold_assessment` envelope sent. Structured won. |
+
+Both branches preserve the structured envelope so AI coding agents can deterministically branch on the `error_code` or warning `code` strings. See the [versioning policy](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) for stability guarantees on these codes.
+
+## Versioning
+
+This package follows semver. Pin a minor version range (`"@unfoldit/mcp-server": "^0.7.0"`) -- you will get fixes and additive features automatically; breaking changes require a major version bump. We support the latest two minor versions; older minors receive security fixes only.
+
+See [GUIDE_MCP_VERSIONING](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) for the full policy. See [CHANGELOG.md](./CHANGELOG.md) for what changed in each release.
+
 ## Learn More
 
 - [Unfold It](https://unfoldit.ai) -- AI-powered goal planning and execution platform
 - [Developers](https://unfoldit.ai/developers) -- API and MCP documentation
 - [GitHub](https://github.com/Unfold-it/unfoldit-mcp-server) -- Source code and issues
+- [Assessment-to-Plan guide](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md) -- End-to-end walkthrough for the score-to-goal chain
+- [Versioning policy](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) -- Semver discipline, supported-versions window, deprecation policy
 
 ## License
 

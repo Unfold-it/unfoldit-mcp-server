@@ -5,6 +5,22 @@ All notable changes to `@unfoldit/mcp-server` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [semver](https://semver.org).
 
+## [0.7.1] - 2026-05-13
+
+### Changed
+
+- **Docs landed in the package repo.** The three partner-facing guides
+  (`ASSESSMENT_TO_PLAN_MCP`, `MCP_VERSIONING`,
+  `ASSESSMENT_PAYLOAD_CONVENTION`) now live in `docs/guides/` in this
+  repo so they are publicly accessible. The 0.7.0 README linked to
+  internal URLs that were not reachable for partners; all README links
+  rewritten to relative paths.
+- `package.json` now declares `repository`, `homepage`, and `bugs` so
+  the npmjs.com landing page renders the right "Repository" link and
+  relative links in the README resolve correctly on the npm side too.
+
+No code changes. This is a patch-level doc + metadata fix.
+
 ## [0.7.0] - 2026-05-13
 
 ### Added

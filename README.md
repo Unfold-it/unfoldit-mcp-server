@@ -112,7 +112,7 @@ Create a goal with an AI-generated plan. The agent auto-answers clarification qu
   - `clinical_intake` v1 -- ADHD / coaching / clinical context. Wire shape is locked; the prompt builder is currently stubbed and returns `assessment_type_not_supported` until a real partner drives it. Sensitive type -- requires superadmin enablement per org.
   - `general` v1 -- Catch-all for assessment data that does not fit either typed shape. Treated as soft hints; only `constraints` honoured as hard limits.
 
-  See [GUIDE_ASSESSMENT_TO_PLAN_MCP](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md) for the canonical end-to-end walkthrough.
+  See [GUIDE_ASSESSMENT_TO_PLAN_MCP](./docs/guides/ASSESSMENT_TO_PLAN_MCP.md) for the canonical end-to-end walkthrough.
 
 **Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`, `warnings` (always present, empty when none)
 
@@ -299,9 +299,9 @@ The canonical chain that turns a scored assessment into a personalised plan, wit
 4. Call `create_goal` with the score response dropped into the new `assessment` field (skill_proficiency v1). The planner uses weak/strong facets to bias steps and anchors them in `work_item_context`.
 5. Send the claim link to the learner.
 
-Full walkthrough with payload examples for `skill_proficiency`, `general`, and `clinical_intake` lives at [GUIDE_ASSESSMENT_TO_PLAN_MCP](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md).
+Full walkthrough with payload examples for `skill_proficiency`, `general`, and `clinical_intake` lives at [GUIDE_ASSESSMENT_TO_PLAN_MCP](./docs/guides/ASSESSMENT_TO_PLAN_MCP.md).
 
-> **Legacy path.** Pre-v0.7.0 integrations stuffed the score into `additional_context.unfold_assessment` per the [payload convention](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_PAYLOAD_CONVENTION.md). That still works on `POST /api/v1/ext/goals` for backwards compat; behind the scenes both paths now route through the same prompt-builder registry. New integrations should use the structured `assessment` field on `create_goal`.
+> **Legacy path.** Pre-v0.7.0 integrations stuffed the score into `additional_context.unfold_assessment` per the [payload convention](./docs/guides/ASSESSMENT_PAYLOAD_CONVENTION.md). That still works on `POST /api/v1/ext/goals` for backwards compat; behind the scenes both paths now route through the same prompt-builder registry. New integrations should use the structured `assessment` field on `create_goal`.
 
 ## Example Prompts
 
@@ -354,21 +354,21 @@ Successful responses on goal creation also carry `warnings: ApiWarning[]` (alway
 | `category_assessment_type_mismatch` | `category` and `assessment.assessment_type` disagree. Plan was generated using assessment_type. |
 | `duplicate_assessment_input` | Both structured `assessment` field and legacy `additional_context.unfold_assessment` envelope sent. Structured won. |
 
-Both branches preserve the structured envelope so AI coding agents can deterministically branch on the `error_code` or warning `code` strings. See the [versioning policy](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) for stability guarantees on these codes.
+Both branches preserve the structured envelope so AI coding agents can deterministically branch on the `error_code` or warning `code` strings. See the [versioning policy](./docs/guides/MCP_VERSIONING.md) for stability guarantees on these codes.
 
 ## Versioning
 
 This package follows semver. Pin a minor version range (`"@unfoldit/mcp-server": "^0.7.0"`) -- you will get fixes and additive features automatically; breaking changes require a major version bump. We support the latest two minor versions; older minors receive security fixes only.
 
-See [GUIDE_MCP_VERSIONING](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) for the full policy. See [CHANGELOG.md](./CHANGELOG.md) for what changed in each release.
+See [GUIDE_MCP_VERSIONING](./docs/guides/MCP_VERSIONING.md) for the full policy. See [CHANGELOG.md](./CHANGELOG.md) for what changed in each release.
 
 ## Learn More
 
 - [Unfold It](https://unfoldit.ai) -- AI-powered goal planning and execution platform
 - [Developers](https://unfoldit.ai/developers) -- API and MCP documentation
 - [GitHub](https://github.com/Unfold-it/unfoldit-mcp-server) -- Source code and issues
-- [Assessment-to-Plan guide](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_ASSESSMENT_TO_PLAN_MCP.md) -- End-to-end walkthrough for the score-to-goal chain
-- [Versioning policy](https://github.com/Unfold-it/webapp/blob/main/docs/guides/GUIDE_MCP_VERSIONING.md) -- Semver discipline, supported-versions window, deprecation policy
+- [Assessment-to-Plan guide](./docs/guides/ASSESSMENT_TO_PLAN_MCP.md) -- End-to-end walkthrough for the score-to-goal chain
+- [Versioning policy](./docs/guides/MCP_VERSIONING.md) -- Semver discipline, supported-versions window, deprecation policy
 
 ## License
 

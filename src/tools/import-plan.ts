@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { UnfoldClient } from "../client.js";
+import { UnfoldApiError, type UnfoldClient } from "../client.js";
 
 export function registerImportPlan(server: McpServer, client: UnfoldClient) {
   server.tool(
@@ -72,6 +72,12 @@ Returns the goal with a claim link and the enriched step list.`,
           }],
         };
       } catch (err) {
+        if (err instanceof UnfoldApiError) {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(err.toPayload(), null, 2) }],
+            isError: true,
+          };
+        }
         const message = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: "text" as const, text: `Error: ${message}` }],

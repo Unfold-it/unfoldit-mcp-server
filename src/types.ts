@@ -1,5 +1,23 @@
 // Shared types for the Unfold MCP server
 
+/**
+ * Non-fatal warning surfaced on a successful response so callers can
+ * self-correct without the request being rejected. Stable `code` strings
+ * (snake_case) for deterministic agent branching. Known codes:
+ *   - "category_assessment_type_mismatch" -- goal `category` and
+ *     `assessment.assessment_type` disagree. Plan was generated using
+ *     `assessment_type`; set category to match if you want category-aware
+ *     resource routing to align.
+ *   - "duplicate_assessment_input" -- both the structured `assessment`
+ *     field and the legacy `additional_context.unfold_assessment`
+ *     envelope were sent on the same request. Structured field wins;
+ *     remove the legacy envelope to clean up.
+ */
+export interface ApiWarning {
+  code: string;
+  message: string;
+}
+
 export interface ExtGoalCreated {
   goalId: string;
   claimLink: string;
@@ -8,6 +26,7 @@ export interface ExtGoalCreated {
   progressLink: string | null;
   status: string;
   planGenerationStatus: string;
+  warnings: ApiWarning[];
 }
 
 export interface ExtUser {
@@ -108,6 +127,7 @@ export interface ExtUnfoldResponse {
   claimToken?: string;
   claimExpiresAt?: string;
   progressLink?: string;
+  warnings: ApiWarning[];
 }
 
 export interface ExtClarifySubmitResponse {
@@ -183,6 +203,22 @@ export interface PerQuestionResult {
   awarded: number;
 }
 
+/**
+ * One facet's aggregated correctness after server-side join with the
+ * per-question facets shipped in the signed token. `classification` is
+ * computed against thresholds documented in the backend; partners get
+ * the same numbers across cohorts.
+ */
+export interface PerFacetResult {
+  facet: string;
+  total: number;
+  correct: number;
+  raw_pct: number;
+  classification: "weak" | "strong" | "mixed";
+}
+
+export type FacetCoverage = "full" | "partial" | "difficulty_fallback";
+
 export interface SuggestedGoalSeed {
   title: string;
   summary: string;
@@ -198,8 +234,146 @@ export interface ScoreAssessmentResponse {
   target_band: string;
   gap_bands: number;
   per_question: PerQuestionResult[];
+  /**
+   * Per-facet aggregation computed server-side. Ordered by descending
+   * raw_pct (ties broken by facet name ascending) for stable rendering.
+   */
+  per_facet: PerFacetResult[];
+  /**
+   * Facet names classified "weak" (raw_pct < 50 with >= 2 questions).
+   * Convenience projection of per_facet for callers that only want the
+   * short list. Excludes the `_unfaceted` bucket so partners do not
+   * surface it as a learning topic.
+   */
+  weak_facets: string[];
+  strong_facets: string[];
+  /**
+   * Quality of the underlying facet labelling:
+   *   - "full" -- every question had a real LLM-emitted skill_facet.
+   *   - "partial" -- some questions used the difficulty:<level>
+   *     synthetic fallback.
+   *   - "difficulty_fallback" -- the whole aggregation is over
+   *     difficulty buckets. Soften "weak in X" UI framing accordingly.
+   */
+  facet_coverage: FacetCoverage;
   recommended_action: string;
   suggested_goal_seed?: SuggestedGoalSeed | null;
+}
+
+// ===========================================================================
+// Assessment input (the `assessment` field on create_goal)
+// ===========================================================================
+
+/**
+ * The structured assessment input that ships on `create_goal`. A
+ * discriminated union over `assessment_type`. Currently three variants:
+ *
+ * - `skill_proficiency` v1: scored skill assessment. Drop the response
+ *   from `score_skill_assessment` straight in (plus assessment_type +
+ *   schema_version + assessed_at headers and a couple of renames).
+ *
+ * - `clinical_intake` v1: schema reserved for ADHD / coaching /
+ *   clinical contexts. Wire shape is locked; the backend prompt
+ *   builder is currently a stub and will return
+ *   `assessment_type_not_supported` until a real partner drives it.
+ *   Build integrations now; switch on when the backend lands.
+ *
+ * - `general` v1: deliberately-weaker catch-all for assessment data
+ *   that does not fit either typed shape. The planner treats input as
+ *   supplementary hints, not hard constraints (except items under
+ *   `constraints`, which are honoured as hard limits).
+ *
+ * Unknown extra fields inside each variant are ignored by the backend,
+ * so partners running ahead of the server do not break.
+ */
+export type AssessmentInput =
+  | SkillProficiencyAssessmentV1
+  | ClinicalIntakeAssessmentV1
+  | GeneralAssessmentV1;
+
+export interface WorkItemContextV1 {
+  title: string;
+  description?: string;
+}
+
+export interface PerQuestionSummaryEntryV1 {
+  facet?: string;
+  difficulty?: string;
+  correct?: boolean;
+}
+
+export interface SkillProficiencyAssessmentV1 {
+  assessment_type: "skill_proficiency";
+  schema_version: "v1";
+  // Required
+  skill: string;
+  target_band: "beginner" | "low" | "medium" | "high";
+  assessed_at: string; // ISO 8601
+  // Optional but recommended
+  achieved_band?: "beginner" | "low" | "medium" | "high";
+  raw_pct?: number;
+  gap_bands?: number;
+  weak_facets?: string[];
+  strong_facets?: string[];
+  per_question_summary?: PerQuestionSummaryEntryV1[];
+  work_item_context?: WorkItemContextV1;
+  assessment_id?: string;
+}
+
+export interface SubjectProfileV1 {
+  age?: number;
+  age_band?: "child" | "teen" | "adult";
+  self_identifies_as?: string;
+}
+
+export interface DiagnosisV1 {
+  condition: string;
+  diagnosed_at?: string;
+  diagnosed_by?: string;
+}
+
+export interface ScreeningResultV1 {
+  instrument: string;
+  score?: number;
+  interpretation?: string;
+}
+
+export interface ClinicalConstraintsV1 {
+  medication?: string;
+  comorbidities?: string[];
+  accommodations_in_place?: string[];
+}
+
+export interface ClinicalIntakeAssessmentV1 {
+  assessment_type: "clinical_intake";
+  schema_version: "v1";
+  // Required
+  subject_profile: SubjectProfileV1;
+  target_areas: string[];
+  assessed_at: string;
+  // Optional
+  diagnoses?: DiagnosisV1[];
+  screening_results?: ScreeningResultV1[];
+  current_struggles?: string[];
+  strengths?: string[];
+  constraints?: ClinicalConstraintsV1;
+  clinician_notes?: string;
+  assessor_role?: "self" | "clinician" | "coach" | "parent";
+}
+
+export interface GeneralAssessmentV1 {
+  assessment_type: "general";
+  schema_version: "v1";
+  // Required
+  summary: string;
+  assessed_at: string;
+  // Optional structured signals (treated as soft hints by the planner)
+  focus_areas?: string[];
+  avoid_areas?: string[];
+  // Items in `constraints` ARE honoured as hard limits in the general
+  // builder, unlike the other soft hints.
+  constraints?: string[];
+  subject_profile?: Record<string, unknown>;
 }
 
 export interface AssessmentCapabilities {

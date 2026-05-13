@@ -1,6 +1,7 @@
 // REST client for the Unfold external API (/api/v1/ext/*)
 
 import type {
+  AssessmentInput,
   ExtGoalCreated,
   ExtGoalStatus,
   ExtGoalListResponse,
@@ -19,6 +20,98 @@ const DEFAULT_TIMEOUT_MS = parseInt(
   process.env.UNFOLD_MCP_REQUEST_TIMEOUT_MS || "30000",
   10
 );
+
+/**
+ * Typed error from the Unfold API. Preserves the backend's structured
+ * error envelope (error_code, message, settings_url, switch_to_unfold_ai,
+ * supported types, etc.) so agents can branch on `errorCode` rather than
+ * having to regex-parse a stringified message.
+ *
+ * Known error codes (see backend errors.py for the source of truth):
+ *   - "models_not_configured" / "provider_unauthorized" /
+ *     "provider_quota_exceeded" / "provider_unavailable" /
+ *     "provider_request_invalid" -- LLM provider issues, per
+ *     CLAUDE.md taxonomy. Some carry a `switch_to_unfold_ai` block.
+ *   - "validation_failed" -- generation produced output that failed
+ *     structural/semantic validation after retry budget.
+ *   - "token_invalid" / "assessment_expired" -- assessment token
+ *     tampered or past its TTL.
+ *   - "assessment_type_not_supported" -- assessment_type is
+ *     recognised but its prompt builder is not yet wired (e.g.
+ *     clinical_intake before partner integration). Carries
+ *     `supported` list with the (assessment_type, schema_version)
+ *     pairs that ARE wired.
+ *   - "idempotency_conflict" -- same request_id was used with a
+ *     different request body.
+ */
+export class UnfoldApiError extends Error {
+  status: number;
+  errorCode: string | null;
+  details: Record<string, unknown>;
+
+  constructor(status: number, message: string, errorCode: string | null, details: Record<string, unknown>) {
+    super(message);
+    this.name = "UnfoldApiError";
+    this.status = status;
+    this.errorCode = errorCode;
+    this.details = details;
+  }
+
+  /** Structured payload for surfacing to MCP clients / agents. */
+  toPayload(): Record<string, unknown> {
+    return {
+      error_code: this.errorCode ?? "unknown",
+      status: this.status,
+      message: this.message,
+      ...this.details,
+    };
+  }
+}
+
+function parseApiError(status: number, body: unknown): UnfoldApiError {
+  // FastAPI wraps responses in {"detail": ...}. The detail can be:
+  //  - a typed dict like {"error_code": ..., "message": ..., "..."}
+  //  - a plain string
+  //  - a list of validation errors (Pydantic ValidationError)
+  // We unwrap the typed-dict case and preserve the rest verbatim in
+  // `details` so agents can branch on whatever the backend sent.
+  if (body && typeof body === "object") {
+    const obj = body as Record<string, unknown>;
+    const detail = obj.detail;
+    if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+      const d = detail as Record<string, unknown>;
+      const code = typeof d.error_code === "string" ? d.error_code : null;
+      const msg = typeof d.message === "string" ? d.message : `Unfold API error (${status})`;
+      const { error_code: _ec, message: _msg, ...rest } = d;
+      return new UnfoldApiError(status, msg, code, rest);
+    }
+    if (typeof detail === "string") {
+      return new UnfoldApiError(status, detail, null, {});
+    }
+    // 422 validation errors: list under detail; surface as-is.
+    if (Array.isArray(detail)) {
+      return new UnfoldApiError(
+        status,
+        `Unfold API validation error (${status})`,
+        "validation_error",
+        { validation_errors: detail },
+      );
+    }
+    // Fallback: typed envelope at top level (no detail wrapper).
+    if (typeof obj.error_code === "string") {
+      const code = obj.error_code;
+      const msg = typeof obj.message === "string" ? obj.message : `Unfold API error (${status})`;
+      const { error_code: _ec, message: _msg, ...rest } = obj;
+      return new UnfoldApiError(status, msg, code, rest);
+    }
+  }
+  return new UnfoldApiError(
+    status,
+    `Unfold API error (${status}): ${typeof body === "string" ? body : JSON.stringify(body)}`,
+    null,
+    {},
+  );
+}
 
 export class UnfoldClient {
   private baseUrl: string;
@@ -59,14 +152,13 @@ export class UnfoldClient {
     }
 
     if (!res.ok) {
-      let detail = "";
+      let parsed: unknown;
       try {
-        const err = await res.json();
-        detail = typeof err.detail === "string" ? err.detail : JSON.stringify(err);
+        parsed = await res.json();
       } catch {
-        detail = await res.text();
+        parsed = await res.text();
       }
-      throw new Error(`Unfold API error (${res.status}): ${detail}`);
+      throw parseApiError(res.status, parsed);
     }
 
     if (res.status === 204) return undefined as T;
@@ -89,6 +181,7 @@ export class UnfoldClient {
     claimExpiresInDays?: number;
     progressShare?: boolean;
     metadata?: Record<string, string>;
+    assessment?: AssessmentInput;
   }): Promise<ExtGoalCreated> {
     return this.request<ExtGoalCreated>("POST", "/goals", {
       title: params.title,
@@ -102,6 +195,7 @@ export class UnfoldClient {
         ? { enabled: true }
         : undefined,
       metadata: params.metadata,
+      assessment: params.assessment,
     });
   }
 
@@ -165,6 +259,7 @@ export class UnfoldClient {
     metadata?: Record<string, string>;
     category?: string;
     resourceWorld?: Record<string, unknown>;
+    assessment?: AssessmentInput;
   }): Promise<ExtUnfoldResponse> {
     // Tier 1 (auto_respond=false) runs synchronous LLM work (40s backend budget);
     // Tier 2 (auto_respond=true) returns immediately after DB write.
@@ -186,6 +281,7 @@ export class UnfoldClient {
       metadata: params.metadata,
       category: params.category,
       resourceWorld: params.resourceWorld,
+      assessment: params.assessment,
     }, timeout);
   }
 

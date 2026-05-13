@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { UnfoldClient } from "../client.js";
+import { UnfoldApiError, type UnfoldClient } from "../client.js";
 
 export function registerListResourceCategories(server: McpServer, client: UnfoldClient) {
   server.tool(
@@ -27,6 +27,12 @@ Use this to build adaptive UIs that show category-specific options to your users
           }],
         };
       } catch (err) {
+        if (err instanceof UnfoldApiError) {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify(err.toPayload(), null, 2) }],
+            isError: true,
+          };
+        }
         const message = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: "text" as const, text: `Error: ${message}` }],

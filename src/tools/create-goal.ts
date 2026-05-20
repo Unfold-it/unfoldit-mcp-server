@@ -188,6 +188,20 @@ WARNINGS (non-fatal, surfaced in response.warnings):
           "- clinical_intake v1: ADHD/coaching/clinical context. Wire shape is locked; the prompt builder is not yet wired (you will get assessment_type_not_supported until a real partner drives it).\n" +
           "- general v1: catch-all for assessment data that does not fit either typed shape. Treated as soft hints; `constraints` are the only hard limits.",
         ),
+      request_id: z.string().max(128).optional()
+        .describe(
+          "Idempotency key. Within a 5-minute window, two calls with the same " +
+          "request_id return the SAME goal and claim link instead of creating " +
+          "a new one. MUST be unique per logical operation (per learner / per " +
+          "enrollment). Two different learners with identical title/description/" +
+          "assessment MUST use different keys -- if you reuse a key across " +
+          "learners, the second learner receives a claim link the first " +
+          "learner already claimed. Recommended construction: derive from your " +
+          "own enrollment_id, or `${course_id}:${learner_id}`. Omit to get a " +
+          "fresh goal on every call (the default). On a replay, the response's " +
+          "`idempotentReplay` is true and `claimStatus` reflects current DB " +
+          "truth so you can detect a link that was already consumed.",
+        ),
     },
     async (params) => {
       try {
@@ -205,6 +219,7 @@ WARNINGS (non-fatal, surfaced in response.warnings):
           category: params.category,
           resourceWorld: params.resource_world,
           assessment: params.assessment as AssessmentInput | undefined,
+          requestId: params.request_id,
         });
 
         return {

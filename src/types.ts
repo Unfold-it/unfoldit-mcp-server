@@ -24,8 +24,20 @@ export interface ExtGoalCreated {
   claimToken: string;
   claimExpiresAt: string;
   progressLink: string | null;
+  /**
+   * Claim state at response time. "unclaimed" on a fresh create; refreshed
+   * from the DB on idempotent replays so a partner can detect a link that
+   * has been consumed since the original create (values: "unclaimed" |
+   * "claimed" | "expired" | "revoked").
+   */
   status: string;
   planGenerationStatus: string;
+  /**
+   * True when this response was served from the idempotency cache (a prior
+   * call with the same requestId produced this goal). Inspect `status` to
+   * learn whether the link is still safe to forward.
+   */
+  idempotentReplay: boolean;
   warnings: ApiWarning[];
 }
 
@@ -119,6 +131,10 @@ export interface ClarificationQuestion {
 export interface ExtUnfoldResponse {
   goalId: string;
   sessionId?: string;
+  /**
+   * Unfold-flow state ("clarification_pending" | "generating"). NOT the
+   * claim state -- see `claimStatus` for that.
+   */
   status: string;
   planGenerationStatus: string;
   questions?: ClarificationQuestion[];
@@ -127,6 +143,20 @@ export interface ExtUnfoldResponse {
   claimToken?: string;
   claimExpiresAt?: string;
   progressLink?: string;
+  /**
+   * True when this response was served from the idempotency cache (a prior
+   * call with the same requestId produced this goal). Inspect `claimStatus`
+   * to learn whether the link is still safe to forward.
+   */
+  idempotentReplay: boolean;
+  /**
+   * Current state of the claim token: "unclaimed" | "claimed" | "expired"
+   * | "revoked". Null on a fresh create (implicitly "unclaimed"). Populated
+   * on idempotent replays by refreshing the underlying ClaimToken row so
+   * partners can detect a link that has been consumed since the original
+   * create.
+   */
+  claimStatus: string | null;
   warnings: ApiWarning[];
 }
 

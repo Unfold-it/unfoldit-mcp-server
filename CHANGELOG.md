@@ -5,6 +5,57 @@ All notable changes to `@unfoldit/mcp-server` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [semver](https://semver.org).
 
+## [0.8.0] - 2026-05-20
+
+### Added
+
+- **`request_id` on `create_goal`.** Optional caller-supplied idempotency
+  key. Within a 5-minute window, two calls with the same `request_id`
+  return the SAME goal and claim link instead of creating a new one.
+  Designed for academy / partner integrations that retry on network
+  blips or process restarts. Construct from your own per-learner
+  identifier (e.g. `enrollment:42:learner:7`). **Two different learners
+  MUST use different keys** -- reusing a key across learners hands the
+  second learner a claim link the first learner already claimed.
+  When the field is omitted, every call still creates a fresh goal
+  exactly like in 0.7.x. See the
+  [Idempotency section](./README.md#idempotency) of the README for the
+  full rules and a code snippet.
+- **`idempotentReplay` on `ExtGoalCreated` and `ExtUnfoldResponse`.**
+  Boolean. `true` when the response was served from the idempotency
+  cache (a prior call with the same `request_id` produced this goal).
+  `false` on a fresh create. Lets partners branch retries
+  deterministically.
+- **`claimStatus` on `ExtUnfoldResponse`.** Current state of the
+  underlying claim token: `"unclaimed" | "claimed" | "expired" |
+  "revoked"`. `null` on a fresh create (implicitly "unclaimed").
+  Populated on idempotent replays by refreshing the DB so partners can
+  detect a link that has been consumed since the original create. On
+  `ExtGoalCreated` the existing top-level `status` field serves the
+  same role and is similarly refreshed on replays.
+
+### Behaviour notes
+
+- The idempotency cache is **in-process per pod** with a 5-minute TTL.
+  Retries that land on a different Cloud Run pod or arrive after a pod
+  restart will miss the cache and create a fresh goal. Treat the window
+  as a retry helper, not a deduplication guarantee. A Redis-backed
+  cache is on the roadmap.
+- The wire field name is `requestId` (camelCase) -- the same name
+  already used on Tier 1 unfold since 0.6 -- so partners learn one
+  rule across the create surface.
+
+### Backwards compatibility
+
+- `request_id` is optional with no default behaviour. Existing
+  integrations that do not send it are unaffected.
+- `idempotentReplay` and `claimStatus` are new fields on the response.
+  Clients that ignore unknown fields are unaffected. TypeScript
+  consumers that construct `ExtGoalCreated` / `ExtUnfoldResponse`
+  manually (e.g. in tests) now need to populate `idempotentReplay` --
+  wire-deserialised responses are not impacted because the backend
+  always populates it.
+
 ## [0.7.1] - 2026-05-13
 
 ### Changed

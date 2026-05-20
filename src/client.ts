@@ -260,6 +260,7 @@ export class UnfoldClient {
     category?: string;
     resourceWorld?: Record<string, unknown>;
     assessment?: AssessmentInput;
+    requestId?: string;
   }): Promise<ExtUnfoldResponse> {
     // Tier 1 (auto_respond=false) runs synchronous LLM work (40s backend budget);
     // Tier 2 (auto_respond=true) returns immediately after DB write.
@@ -282,6 +283,7 @@ export class UnfoldClient {
       category: params.category,
       resourceWorld: params.resourceWorld,
       assessment: params.assessment,
+      requestId: params.requestId,
     }, timeout);
   }
 

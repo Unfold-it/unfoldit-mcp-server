@@ -113,8 +113,9 @@ Create a goal with an AI-generated plan. The agent auto-answers clarification qu
   - `general` v1 -- Catch-all for assessment data that does not fit either typed shape. Treated as soft hints; only `constraints` honoured as hard limits.
 
   See [GUIDE_ASSESSMENT_TO_PLAN_MCP](./docs/guides/ASSESSMENT_TO_PLAN_MCP.md) for the canonical end-to-end walkthrough.
+- `request_id` (since v0.8.0, optional, idempotency key) -- Within a 5-minute window, two `create_goal` calls with the same `request_id` return the SAME goal and claim link instead of creating a new one. See [Idempotency](#idempotency) below for the rules. Omit to get a fresh goal on every call (default).
 
-**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`, `warnings` (always present, empty when none)
+**Returns:** `goalId`, `claimLink`, `claimToken`, `progressLink`, `planGenerationStatus`, `questions` (if auto_respond=false), `agentAnswersUsed`, `idempotentReplay` (since v0.8.0), `claimStatus` (since v0.8.0), `warnings` (always present, empty when none)
 
 ### get_goal_status
 
@@ -264,6 +265,48 @@ Get supported parameters for skill assessments. Use this to introspect before ca
 
 **Requires scope:** `assessment:read_capabilities`
 
+## Idempotency
+
+> Available since **v0.8.0**.
+
+`create_goal` accepts an optional `request_id` so a partner can retry safely without producing duplicate goals.
+
+**The rules**
+
+1. **Scope the key to one logical operation.** A "logical operation" is one learner / one enrollment. Construct the key from your own per-learner identifier, for example:
+   ```
+   request_id = "enrollment:42:learner:7"
+   request_id = "course:python-101:user:abc-123"
+   ```
+2. **Reuse the key on retries, not on new learners.** If a network blip or process restart makes you re-send the same call for the same learner, use the same `request_id`. If you are creating a goal for a DIFFERENT learner, generate a NEW key.
+3. **Do NOT derive the key from the body.** Two learners enrolled in the same course will produce identical title / description / assessment payloads. If you reuse a body-derived key, the second learner will receive a claim link the first learner already claimed.
+4. **Without a `request_id`, every call creates a fresh goal.** This is the default and is always safe.
+
+**Cache window**
+
+Two calls with the same tenant + `request_id` within 5 minutes return the same response. After 5 minutes the key falls out of cache and a fresh call creates a new goal. Best-effort across pod restarts and horizontal scaling today; treat the window as a retry helper, not a deduplication guarantee.
+
+**Detecting a replay**
+
+Two new fields on the response tell you what happened:
+
+- `idempotentReplay: true` -- this response was served from cache. A prior call with the same `request_id` produced this goal.
+- `claimStatus: "unclaimed" | "claimed" | "expired" | "revoked"` -- current state of the underlying claim token, refreshed from the DB on every replay. `null` on a fresh create (implicitly "unclaimed").
+
+Branch on this when handling retries:
+
+```ts
+const result = await create_goal({ title, request_id: enrollmentKey });
+
+if (result.idempotentReplay && result.claimStatus && result.claimStatus !== "unclaimed") {
+  // The link was already consumed by the original recipient. Don't
+  // forward it again -- prompt the human or open a support ticket
+  // depending on your flow.
+} else {
+  // Safe to forward the claimLink to the learner.
+}
+```
+
 ## How It Works
 
 ### Tier 1 -- Semi-Auto (Review agent suggestions)
@@ -358,7 +401,9 @@ Both branches preserve the structured envelope so AI coding agents can determini
 
 ## Versioning
 
-This package follows semver. Pin a minor version range (`"@unfoldit/mcp-server": "^0.7.0"`) -- you will get fixes and additive features automatically; breaking changes require a major version bump. We support the latest two minor versions; older minors receive security fixes only.
+This package follows semver. Pin a minor version range (`"@unfoldit/mcp-server": "^0.8.0"`) -- you will get fixes and additive features automatically; breaking changes require a major version bump. We support the latest two minor versions; older minors receive security fixes only.
+
+Note: in the pre-1.0 era, each minor bump (e.g. 0.7.x -> 0.8.0) may include additive surface changes such as new optional request fields or new response fields. Existing code keeps working; opt in to new behaviour as you need it.
 
 See [GUIDE_MCP_VERSIONING](./docs/guides/MCP_VERSIONING.md) for the full policy. See [CHANGELOG.md](./CHANGELOG.md) for what changed in each release.
 

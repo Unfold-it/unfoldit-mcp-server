@@ -242,6 +242,11 @@ export class UnfoldClient {
     await this.request<void>("DELETE", `/goals/claims/${claimToken}`);
   }
 
+  async deleteGoal(goalId: string, hardDelete = false): Promise<void> {
+    const qs = hardDelete ? "?hardDelete=true" : "";
+    await this.request<void>("DELETE", `/goals/${goalId}${qs}`);
+  }
+
   // Agent-assisted unfold (Tier 1 + 2)
 
   async unfoldGoal(params: {

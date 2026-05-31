@@ -67,7 +67,7 @@ Your API key needs specific scopes depending on which tools you use:
 
 | Scope | Tools | Included by default? |
 |-------|-------|---------------------|
-| `goals:create` | create_goal, unfold_goal, submit_clarification, import_plan | Yes |
+| `goals:create` | create_goal, unfold_goal, submit_clarification, import_plan, delete_goal | Yes |
 | `goals:read` | get_goal_status, list_goals, get_analytics, get_clarification | Yes |
 | `claims:manage` | revoke_claim | Yes |
 | `assessment:generate` | generate_skill_assessment | **No** -- must be granted explicitly |
@@ -76,7 +76,7 @@ Your API key needs specific scopes depending on which tools you use:
 
 Assessment scopes are opt-in. Ask your org owner to enable them in the API Key settings.
 
-## Available Tools (12)
+## Available Tools (13)
 
 ### create_goal
 
@@ -219,6 +219,14 @@ Invalidate a claim link so it can no longer be used.
 
 **Input:**
 - `claim_token` (required) -- The token from the claim link URL
+
+### delete_goal
+
+Delete a goal created via the API. Main use case: after a learner retakes a skill assessment, call `create_goal` with the new `suggested_goal_seed` and then `delete_goal` on the obsolete goal so the dashboard shows the current goal instead of duplicates. Soft delete by default (recoverable); set `hard_delete=true` to remove the row permanently. Scoped to api-created goals -- cannot delete goals a user created in the webapp UI.
+
+**Input:**
+- `goal_id` (required) -- UUID of the goal (the `goalId` returned by create_goal)
+- `hard_delete` -- If true, permanently delete the row instead of soft-deleting. Default false.
 
 ### generate_skill_assessment
 

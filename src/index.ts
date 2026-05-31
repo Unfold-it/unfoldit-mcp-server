@@ -15,6 +15,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { UnfoldClient } from "./client.js";
 import { registerCreateGoal } from "./tools/create-goal.js";
+import { registerDeleteGoal } from "./tools/delete-goal.js";
 import { registerGetGoalStatus } from "./tools/get-goal-status.js";
 import { registerListGoals } from "./tools/list-goals.js";
 import { registerRevokeClaim } from "./tools/revoke-claim.js";
@@ -49,6 +50,7 @@ const server = new McpServer({
 
 // Register all tools
 registerCreateGoal(server, client);
+registerDeleteGoal(server, client);
 registerGetGoalStatus(server, client);
 registerListGoals(server, client);
 registerRevokeClaim(server, client);

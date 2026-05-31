@@ -5,6 +5,31 @@ All notable changes to `@unfoldit/mcp-server` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [semver](https://semver.org).
 
+## [0.9.0] - 2026-05-31
+
+### Added
+
+- **`delete_goal` tool.** Soft-delete (or hard-delete) a goal created via
+  the API. The main use case is regenerating a goal after a learner
+  retakes a skill assessment: create the new goal, then call
+  `delete_goal` on the obsolete one so the learner's dashboard shows the
+  current goal instead of duplicates. Soft delete by default
+  (`status='deleted'`, recoverable); pass `hard_delete=true` to remove
+  the row permanently and cascade to steps, plans, and share links.
+  Scoped to api-created goals in your org -- it will not delete goals a
+  user created in the webapp UI.
+
+### Behaviour notes
+
+- Authorization reuses the existing `goals:create` scope -- partners
+  can delete the goals they created without re-issuing API keys. A
+  dedicated `goals:delete` scope may be introduced in a future release
+  if finer-grained delegation is needed.
+- Soft delete is idempotent: calling `delete_goal` twice with the same
+  `goal_id` returns success both times. Hard delete after soft delete
+  also returns success (the row is removed). Hard delete twice returns
+  404 on the second call.
+
 ## [0.8.0] - 2026-05-20
 
 ### Added

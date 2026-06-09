@@ -208,10 +208,11 @@ List all goals in your org with optional filters. Use `metadata` to filter to a 
 - `metadata` -- Filter by metadata tag(s) in "key=value" format, e.g. `["track=frontend", "cohort=spring-2026"]`
 - `assigned_email` -- Return only the goal assigned to this learner email
 - `inactive_days` -- Return only goals with no step activity in the last N days (1-365)
-- `limit` -- Max results (default: 50)
+- `include_steps` (since v0.10.0) -- Include per-step details (`steps[]`) for each goal whose plan is ready. Off by default to keep list payloads lean; set true to render step lists without a `get_goal_status` call per goal.
+- `limit` -- Max results (default: 50, max: 100)
 - `offset` -- Pagination offset
 
-**Returns:** Array of goal statuses with `progress`, `resourceCategory`, `metadata`, `claimCreatedAt`, `claimedAt`
+**Returns:** Array of goal statuses with `progress`, `resourceCategory`, `metadata`, `claimCreatedAt`, `claimedAt`. When `include_steps=true`, each goal whose plan is ready also carries `steps[]` -- the same per-step shape as `get_goal_status` (timestamps, time spent, blocker count, substep counts). Goals still generating return `steps: null`. Steps are not paginated; the full step list is returned per goal.
 
 ### revoke_claim
 

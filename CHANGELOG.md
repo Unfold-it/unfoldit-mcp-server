@@ -5,6 +5,27 @@ All notable changes to `@unfoldit/mcp-server` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [semver](https://semver.org).
 
+## [0.10.0] - 2026-06-09
+
+### Added
+
+- **`include_steps` on `list_goals`.** Opt-in flag that hydrates each
+  returned goal with its per-step details (`steps[]`) when the plan is
+  ready, so callers no longer need a `get_goal_status` call per goal to
+  render step lists (e.g. a profile "My Courses" view). Off by default --
+  the list response is unchanged unless you pass `include_steps=true`.
+  Steps are batch-loaded for the page in a single query. Goals whose
+  plan is still generating return `steps: null`. The per-step shape
+  matches `get_goal_status` (timestamps, time spent, blocker count,
+  substep counts).
+
+### Behaviour notes
+
+- Backwards-compatible: omitting `include_steps` (the default) returns
+  the same payload as before, with no extra query. Steps are not
+  paginated -- the full step list is returned per goal, so prefer a
+  smaller `limit` when combining `include_steps` with large step counts.
+
 ## [0.9.0] - 2026-05-31
 
 ### Added

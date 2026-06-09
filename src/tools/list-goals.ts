@@ -28,6 +28,8 @@ For aggregate cohort metrics, use get_analytics instead.`,
         .describe("Return only the goal assigned to this learner email address"),
       inactive_days: z.number().min(1).max(365).optional()
         .describe("Return only goals with no step activity in the last N days (at-risk detection)"),
+      include_steps: z.boolean().optional()
+        .describe("Include per-step details (steps[]) for each goal whose plan is ready. Off by default to keep responses lean; set true to render step lists without a get_goal_status call per goal."),
       limit: z.number().min(1).max(100).default(50).describe("Max results to return"),
       offset: z.number().min(0).default(0).describe("Pagination offset"),
     },
@@ -40,6 +42,7 @@ For aggregate cohort metrics, use get_analytics instead.`,
           metadata: params.metadata,
           assignedEmail: params.assigned_email,
           inactiveDays: params.inactive_days,
+          includeSteps: params.include_steps,
           limit: params.limit,
           offset: params.offset,
         });

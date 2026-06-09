@@ -214,6 +214,7 @@ export class UnfoldClient {
     metadata?: string[];
     assignedEmail?: string;
     inactiveDays?: number;
+    includeSteps?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<ExtGoalListResponse> {
@@ -223,6 +224,7 @@ export class UnfoldClient {
     if (params?.category) query.set("category", params.category);
     if (params?.assignedEmail) query.set("assignedEmail", params.assignedEmail);
     if (params?.inactiveDays) query.set("inactiveDays", String(params.inactiveDays));
+    if (params?.includeSteps) query.set("includeSteps", "true");
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.offset) query.set("offset", String(params.offset));
     // metadata is a repeatable param: metadata=track%3Dfrontend&metadata=cohort%3Dspring

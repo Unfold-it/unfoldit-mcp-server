@@ -46,11 +46,11 @@ We err on the side of "treat it as breaking" when in doubt. The cost of a major 
 
 | MCP package version | Support status | Notes |
 |---|---|---|
-| `^0.10.x` (current) | Active | Fixes and minor additions land here. |
-| `^0.9.x` | Maintenance | Security fixes only. Stop receiving feature additions. |
-| `<= 0.8.x` | Unsupported | Upgrade required. The REST API still accepts your requests, but the MCP tool surface has drifted. |
+| `^0.9.x` (current) | Active | Fixes and minor additions land here. |
+| `^0.8.x` | Maintenance | Security fixes only. Stop receiving feature additions. |
+| `<= 0.7.x` | Unsupported | Upgrade required. The REST API still accepts your requests, but the MCP tool surface has drifted. |
 
-**Maintenance window length:** at minimum until a third minor lands. So when `0.11.0` ships, `0.9.x` exits maintenance. If we ship a breaking major (`1.0.0`), `0.10.x` enters maintenance and stays there for at least 6 months to give partners time to upgrade.
+**Maintenance window length:** at minimum until a third minor lands. So when `0.10.0` ships, `0.8.x` exits maintenance. If we ship a breaking major (`1.0.0`), `0.9.x` enters maintenance and stays there for at least 6 months to give partners time to upgrade.
 
 You can always see the current support state in the [CHANGELOG.md](../../CHANGELOG.md) at the top of the file.
 

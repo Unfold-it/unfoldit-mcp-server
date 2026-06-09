@@ -5,7 +5,7 @@ All notable changes to `@unfoldit/mcp-server` are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [semver](https://semver.org).
 
-## [0.10.0] - 2026-06-09
+## [0.9.1] - 2026-06-09
 
 ### Added
 

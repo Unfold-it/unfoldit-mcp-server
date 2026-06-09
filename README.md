@@ -208,7 +208,7 @@ List all goals in your org with optional filters. Use `metadata` to filter to a 
 - `metadata` -- Filter by metadata tag(s) in "key=value" format, e.g. `["track=frontend", "cohort=spring-2026"]`
 - `assigned_email` -- Return only the goal assigned to this learner email
 - `inactive_days` -- Return only goals with no step activity in the last N days (1-365)
-- `include_steps` (since v0.10.0) -- Include per-step details (`steps[]`) for each goal whose plan is ready. Off by default to keep list payloads lean; set true to render step lists without a `get_goal_status` call per goal.
+- `include_steps` (since v0.9.1) -- Include per-step details (`steps[]`) for each goal whose plan is ready. Off by default to keep list payloads lean; set true to render step lists without a `get_goal_status` call per goal.
 - `limit` -- Max results (default: 50, max: 100)
 - `offset` -- Pagination offset
 
